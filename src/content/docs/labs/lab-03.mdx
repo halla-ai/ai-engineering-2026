@@ -1,0 +1,202 @@
+---
+title: "Lab 03: MCP 서버 구성"
+description: MCP 서버 설정, 파일시스템+Git 서버 구성, 커스텀 MCP 도구 구현
+week: 3
+difficulty: 초급
+estimated_time: 5시간
+assignment_due: "2026-03-25"
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+<Badge text="초급" variant="caution" /> <Badge text="마감: 2026-03-25" variant="note" />
+
+## 목표
+
+- MCP(Model Context Protocol) 개념 이해 및 서버 설정
+- 파일시스템 MCP 서버와 Git MCP 서버 동시 구성
+- 커스텀 MCP 도구(tool) 직접 구현
+
+## MCP 개요
+
+MCP는 Claude가 외부 도구·데이터 소스와 표준화된 방식으로 통신하는 프로토콜이다. Claude Code는 `~/.claude/settings.json`(또는 프로젝트별 `.claude/settings.json`)에 MCP 서버를 등록하여 사용한다.
+
+```
+Claude Code  ←→  MCP 클라이언트  ←→  MCP 서버  ←→  파일시스템 / Git / 커스텀 API
+```
+
+## 구현 요구사항
+
+### 1. MCP 서버 설정 — `settings.json`
+
+Claude Code 설정 파일에 두 개의 내장 서버를 추가한다.
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/[학번]/lab-03"
+      ]
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git",
+        "--repository",
+        "/home/[학번]/lab-03"
+      ]
+    }
+  }
+}
+```
+
+<Aside type="tip" title="경로 주의">
+`filesystem` 서버에 등록한 경로 외부의 파일은 Claude가 접근할 수 없다. 실습 디렉터리를 정확히 지정할 것.
+</Aside>
+
+### 2. 서버 동작 확인
+
+<Steps>
+1. **서버 목록 확인**
+
+   ```bash
+   claude mcp list
+   # filesystem  npx -y @modelcontextprotocol/server-filesystem ...
+   # git         npx -y @modelcontextprotocol/server-git ...
+   ```
+
+2. **파일시스템 서버 테스트**
+
+   ```bash
+   claude "현재 디렉터리의 파일 목록을 보여줘."
+   # filesystem 서버의 list_directory 도구가 호출되어야 함
+   ```
+
+3. **Git 서버 테스트**
+
+   ```bash
+   git init /home/[학번]/lab-03
+   claude "최근 커밋 3개의 메시지를 요약해줘."
+   ```
+</Steps>
+
+### 3. 커스텀 MCP 서버 — `custom_server.py`
+
+Python으로 간단한 MCP 서버를 직접 구현한다. `mcp` 패키지를 사용한다.
+
+```bash
+pip install mcp
+```
+
+```python
+# custom_server.py
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent
+import json
+import subprocess
+
+app = Server("lab03-custom")
+
+@app.list_tools()
+async def list_tools() -> list[Tool]:
+    return [
+        Tool(
+            name="run_pytest",
+            description="지정한 디렉터리에서 pytest를 실행하고 결과를 반환한다.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "pytest를 실행할 디렉터리 경로"
+                    }
+                },
+                "required": ["path"]
+            }
+        ),
+        Tool(
+            name="count_lines",
+            description="파일의 라인 수를 반환한다.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "라인을 셀 파일의 경로"
+                    }
+                },
+                "required": ["file_path"]
+            }
+        )
+    ]
+
+@app.call_tool()
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    if name == "run_pytest":
+        result = subprocess.run(
+            ["python", "-m", "pytest", arguments["path"], "-v", "--tb=short"],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        output = result.stdout + result.stderr
+        return [TextContent(type="text", text=output)]
+
+    elif name == "count_lines":
+        with open(arguments["file_path"], "r") as f:
+            lines = f.readlines()
+        return [TextContent(type="text", text=str(len(lines)))]
+
+    raise ValueError(f"Unknown tool: {name}")
+
+async def main():
+    async with stdio_server() as (read_stream, write_stream):
+        await app.run(read_stream, write_stream, app.create_initialization_options())
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
+```
+
+### 4. 커스텀 서버 등록
+
+`settings.json`에 커스텀 서버를 추가한다.
+
+```json
+{
+  "mcpServers": {
+    "filesystem": { "...": "..." },
+    "git": { "...": "..." },
+    "custom": {
+      "command": "python",
+      "args": ["/home/[학번]/lab-03/custom_server.py"]
+    }
+  }
+}
+```
+
+커스텀 도구 동작 확인:
+
+```bash
+claude "lab-03 디렉터리에서 pytest를 실행해줘."
+# run_pytest 도구가 호출되어야 함
+```
+
+## 제출물
+
+`assignments/lab-03/[학번]/`에 PR:
+
+- [ ] `settings.json` — filesystem, git, custom 세 서버가 등록된 설정 파일
+- [ ] `custom_server.py` — `run_pytest`, `count_lines` 두 도구 구현
+- [ ] `test_sample.py` — custom 서버의 `run_pytest`로 실행할 테스트 파일 (최소 3개 테스트)
+- [ ] `README.md` — 각 MCP 서버의 동작 확인 결과 및 트러블슈팅 기록
+
+<Aside type="caution" title="보안 고려">
+MCP 서버는 Claude에게 강력한 권한을 부여한다. 프로덕션 환경에서는 허용 경로와 실행 가능 명령을 최소한으로 제한할 것.
+</Aside>

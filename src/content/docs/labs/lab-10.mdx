@@ -1,0 +1,317 @@
+---
+title: "Lab 10: vLLM 배포 실습"
+description: DGX H100에 vLLM 설치, DeepSeek-Coder-V2 배포, 성능 벤치마크
+week: 11
+difficulty: 고급
+estimated_time: 8시간
+assignment_due: "2026-05-13"
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+<Badge text="고급" variant="danger" /> <Badge text="마감: 2026-05-13" variant="note" />
+
+## 목표
+
+- DGX H100 서버에 vLLM 설치 및 환경 구성
+- DeepSeek-Coder-V2-Lite(16B) 모델 배포 및 OpenAI 호환 API 서빙
+- Throughput, TTFT, TBT 지표로 성능 벤치마크 수행
+
+## 사전 요건
+
+- DGX H100 SSH 접속 (Lab 01 참조)
+- NVIDIA 드라이버 및 CUDA 12.1+ 확인: `nvidia-smi`
+- Hugging Face 계정 및 액세스 토큰 (`HF_TOKEN`)
+
+## 구현 요구사항
+
+### 1. 환경 설정
+
+<Steps>
+1. **가상환경 생성**
+
+   ```bash
+   # DGX 서버에서
+   python3 -m venv ~/vllm-env
+   source ~/vllm-env/bin/activate
+   ```
+
+2. **vLLM 설치**
+
+   ```bash
+   pip install vllm==0.4.3
+   # CUDA 버전 확인 후 설치 — H100은 CUDA 12.x
+   pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cu121
+   ```
+
+3. **Hugging Face 로그인**
+
+   ```bash
+   pip install huggingface_hub
+   huggingface-cli login --token $HF_TOKEN
+   ```
+
+4. **모델 다운로드**
+
+   ```bash
+   # DeepSeek-Coder-V2-Lite-Instruct (16B, 약 32GB)
+   huggingface-cli download \
+     deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+     --local-dir ~/models/deepseek-coder-v2-lite \
+     --local-dir-use-symlinks False
+   ```
+</Steps>
+
+### 2. vLLM 서버 시작
+
+```bash
+# start_server.sh
+#!/usr/bin/env bash
+MODEL_PATH="$HOME/models/deepseek-coder-v2-lite"
+PORT=8000
+GPU_UTIL=0.90          # GPU 메모리 사용률
+MAX_MODEL_LEN=32768    # 최대 컨텍스트 길이
+
+python -m vllm.entrypoints.openai.api_server \
+  --model "$MODEL_PATH" \
+  --dtype bfloat16 \
+  --tensor-parallel-size 2 \
+  --gpu-memory-utilization $GPU_UTIL \
+  --max-model-len $MAX_MODEL_LEN \
+  --port $PORT \
+  --host 0.0.0.0 \
+  --served-model-name deepseek-coder-v2 \
+  --trust-remote-code \
+  2>&1 | tee vllm_server.log
+```
+
+```bash
+# 백그라운드 실행
+nohup bash start_server.sh &
+
+# 서버 준비 대기
+until curl -s http://localhost:8000/health > /dev/null; do
+  echo "서버 시작 대기 중..."
+  sleep 5
+done
+echo "서버 준비 완료"
+```
+
+<Aside type="tip" title="텐서 병렬">
+`--tensor-parallel-size 2`는 두 개의 H100 GPU에 모델을 분산한다. 8개 GPU가 사용 가능하다면 `8`로 설정해 처리량을 극대화할 수 있다.
+</Aside>
+
+### 3. API 호출 테스트
+
+```python
+# test_api.py
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="not-required"  # vLLM은 기본적으로 인증 불필요
+)
+
+# 기본 코드 생성 테스트
+response = client.chat.completions.create(
+    model="deepseek-coder-v2",
+    messages=[
+        {
+            "role": "user",
+            "content": "Python으로 퀵소트를 구현해줘. 타입 힌트 포함."
+        }
+    ],
+    max_tokens=512,
+    temperature=0.1
+)
+print(response.choices[0].message.content)
+print(f"\n토큰: {response.usage}")
+```
+
+### 4. `benchmark.py` — 성능 벤치마크
+
+```python
+# benchmark.py
+import time
+import asyncio
+import statistics
+from dataclasses import dataclass
+from openai import AsyncOpenAI
+
+@dataclass
+class RequestMetrics:
+    prompt_tokens: int
+    completion_tokens: int
+    ttft_ms: float        # Time To First Token
+    total_ms: float       # 전체 응답 시간
+    throughput_tps: float # Tokens Per Second
+
+@dataclass
+class BenchmarkResult:
+    total_requests: int
+    concurrency: int
+    avg_ttft_ms: float
+    p50_ttft_ms: float
+    p99_ttft_ms: float
+    avg_throughput_tps: float
+    total_throughput_tps: float
+    success_rate: float
+
+    def print_report(self):
+        print(f"""
+========== vLLM 벤치마크 결과 ==========
+총 요청 수:        {self.total_requests}
+동시 요청 수:      {self.concurrency}
+성공률:            {self.success_rate:.1%}
+
+--- Latency ---
+TTFT P50:          {self.p50_ttft_ms:.1f}ms
+TTFT P99:          {self.p99_ttft_ms:.1f}ms
+TTFT 평균:         {self.avg_ttft_ms:.1f}ms
+
+--- Throughput ---
+단일 요청 TPS:     {self.avg_throughput_tps:.1f} tokens/sec
+전체 TPS:          {self.total_throughput_tps:.1f} tokens/sec
+=========================================
+""")
+
+
+async def single_request(
+    client: AsyncOpenAI,
+    prompt: str,
+    max_tokens: int = 256
+) -> RequestMetrics | None:
+    start = time.perf_counter()
+    first_token_time = None
+    total_tokens = 0
+
+    try:
+        async with client.chat.completions.with_streaming_response.create(
+            model="deepseek-coder-v2",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            stream=True
+        ) as resp:
+            async for chunk in resp.parse():  # type: ignore
+                if first_token_time is None and chunk.choices:
+                    first_token_time = time.perf_counter()
+                if chunk.usage:
+                    total_tokens = chunk.usage.completion_tokens
+
+        end = time.perf_counter()
+        ttft = (first_token_time - start) * 1000 if first_token_time else 0
+        total_ms = (end - start) * 1000
+        tps = total_tokens / (end - start) if (end - start) > 0 else 0
+
+        return RequestMetrics(
+            prompt_tokens=0,
+            completion_tokens=total_tokens,
+            ttft_ms=ttft,
+            total_ms=total_ms,
+            throughput_tps=tps
+        )
+    except Exception as e:
+        print(f"요청 실패: {e}")
+        return None
+
+
+async def run_benchmark(
+    prompts: list[str],
+    concurrency: int = 4
+) -> BenchmarkResult:
+    client = AsyncOpenAI(
+        base_url="http://localhost:8000/v1",
+        api_key="not-required"
+    )
+
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async def bounded_request(prompt: str):
+        async with semaphore:
+            return await single_request(client, prompt)
+
+    start_total = time.perf_counter()
+    results = await asyncio.gather(*[bounded_request(p) for p in prompts])
+    end_total = time.perf_counter()
+
+    valid = [r for r in results if r is not None]
+    ttfts = [r.ttft_ms for r in valid]
+    tps_list = [r.throughput_tps for r in valid]
+    total_tokens = sum(r.completion_tokens for r in valid)
+
+    return BenchmarkResult(
+        total_requests=len(prompts),
+        concurrency=concurrency,
+        avg_ttft_ms=statistics.mean(ttfts) if ttfts else 0,
+        p50_ttft_ms=statistics.median(ttfts) if ttfts else 0,
+        p99_ttft_ms=sorted(ttfts)[int(len(ttfts) * 0.99)] if ttfts else 0,
+        avg_throughput_tps=statistics.mean(tps_list) if tps_list else 0,
+        total_throughput_tps=total_tokens / (end_total - start_total),
+        success_rate=len(valid) / len(prompts)
+    )
+
+
+BENCHMARK_PROMPTS = [
+    "Python으로 이진 탐색 트리를 구현해줘.",
+    "FastAPI로 간단한 REST API를 만들어줘.",
+    "SQL JOIN의 종류와 사용 예시를 설명해줘.",
+    "비동기 프로그래밍에서 async/await를 설명해줘.",
+    "도커 컨테이너와 가상머신의 차이점을 설명해줘.",
+    "Python 제너레이터와 이터레이터의 차이는?",
+    "RESTful API 설계 원칙 6가지를 설명해줘.",
+    "머신러닝에서 오버피팅을 방지하는 방법은?",
+] * 4  # 32개 요청
+
+if __name__ == "__main__":
+    for concurrency in [1, 4, 8]:
+        print(f"\n동시 요청 수: {concurrency}")
+        result = asyncio.run(run_benchmark(BENCHMARK_PROMPTS, concurrency))
+        result.print_report()
+```
+
+### 5. Claude Code와 vLLM 연동
+
+```bash
+# Claude Code가 DeepSeek-Coder-V2를 사용하도록 설정
+export ANTHROPIC_BASE_URL="http://localhost:8000/v1"
+export ANTHROPIC_MODEL="deepseek-coder-v2"
+
+# 또는 OpenAI 호환 모드로 직접 사용
+export OPENAI_API_BASE="http://localhost:8000/v1"
+export OPENAI_API_KEY="not-required"
+```
+
+```python
+# local_agent.py — 로컬 모델로 에이전트 실행
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="x")
+
+def ask_coder(task: str) -> str:
+    response = client.chat.completions.create(
+        model="deepseek-coder-v2",
+        messages=[
+            {"role": "system", "content": "You are an expert Python developer."},
+            {"role": "user", "content": task}
+        ],
+        max_tokens=2048,
+        temperature=0.1
+    )
+    return response.choices[0].message.content
+```
+
+## 제출물
+
+`assignments/lab-10/[학번]/`에 PR:
+
+- [ ] `start_server.sh` — vLLM 서버 시작 스크립트
+- [ ] `test_api.py` — 기본 API 호출 테스트
+- [ ] `benchmark.py` — 완전한 벤치마크 스크립트
+- [ ] `benchmark_results.json` — 동시성 1/4/8에 대한 실제 측정 결과
+- [ ] `local_agent.py` — 로컬 vLLM 기반 에이전트
+- [ ] `vllm_server.log` — 서버 시작 로그 (첫 100줄)
+- [ ] `README.md` — 설치 과정, 벤치마크 결과 분석, Claude API 대비 성능/비용 비교
+
+<Aside type="caution" title="GPU 자원 공유">
+DGX 서버는 수업 전체가 공유하는 자원이다. 벤치마크 실행 전 `nvidia-smi`로 현재 사용 중인 GPU를 확인하고, 다른 수강생의 작업을 방해하지 않도록 할 것. 서버 종료 후 반드시 `kill` 명령으로 vLLM 프로세스를 정리할 것.
+</Aside>

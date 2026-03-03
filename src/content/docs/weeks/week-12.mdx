@@ -1,0 +1,143 @@
+---
+title: "12주차: 텔레메트리와 LLM-as-Judge"
+description: 에이전트 시스템 품질 측정 — OpenTelemetry 통합과 자동 평가 프레임워크
+week: 12
+phase: 4
+phase_title: 오픈소스 모델 & MLOps
+date: "2026-05-20"
+theory_topics:
+  - 텔레메트리 설계 원칙
+  - LLM-as-Judge 평가 방법론
+  - 비용 최적화 전략
+lab_topics:
+  - OpenTelemetry 통합
+  - LLM-as-Judge 구현
+assignment: "Lab 11 + Lab 12"
+assignment_due: "2026-05-27"
+difficulty: 고급
+estimated_time: 8시간
+---
+
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 4</span>
+  <Badge text="12주차" variant="note" />
+  <Badge text="고급" variant="danger" />
+</div>
+
+## 이론 (Theory)
+
+### 텔레메트리: HOTL의 눈과 귀
+
+HOTL 아키텍처에서 인간 감독자가 에이전트를 신뢰하려면 **실시간 텔레메트리**가 필수다.
+
+```python
+# telemetry.py — OpenTelemetry 기반 에이전트 모니터링
+from opentelemetry import trace, metrics
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.metrics import MeterProvider
+
+tracer = trace.get_tracer("ralph-loop")
+meter = metrics.get_meter("ralph-loop")
+
+# 주요 메트릭
+loop_counter = meter.create_counter("ralph.loop.count")
+token_usage = meter.create_histogram("ralph.tokens.used")
+success_rate = meter.create_gauge("ralph.success.rate")
+
+def traced_agent_loop(task: str):
+    with tracer.start_as_current_span("agent_loop") as span:
+        span.set_attribute("task.description", task)
+
+        # 루프 실행
+        result = run_ralph_loop(task)
+
+        # 메트릭 기록
+        loop_counter.add(1, {"status": "success" if result.passed else "failure"})
+        token_usage.record(result.tokens_used)
+
+        span.set_attribute("result.passed", result.passed)
+        span.set_attribute("tokens.used", result.tokens_used)
+
+        return result
+```
+
+### LLM-as-Judge 평가 프레임워크
+
+자동 테스트로 검증하기 어려운 **코드 품질, 가독성, 설계 패턴**을 LLM으로 자동 평가한다.
+
+```python
+# llm_judge.py
+import anthropic
+
+JUDGE_SYSTEM_PROMPT = """당신은 10년 경력의 시니어 소프트웨어 엔지니어입니다.
+주어진 코드를 다음 기준으로 1-10점 평가하세요:
+
+1. 정확성 (Correctness): 요구사항을 올바르게 구현했는가?
+2. 가독성 (Readability): 코드가 읽기 쉬운가?
+3. 효율성 (Efficiency): 불필요한 연산이 없는가?
+4. 견고성 (Robustness): 엣지 케이스를 처리하는가?
+5. 유지보수성 (Maintainability): 향후 수정이 쉬운가?
+
+출력 형식:
+{
+  "scores": {"correctness": 8, "readability": 7, ...},
+  "overall": 7.5,
+  "strengths": ["...", "..."],
+  "improvements": ["...", "..."]
+}"""
+
+class LLMJudge:
+    def __init__(self):
+        self.client = anthropic.Anthropic()
+
+    def evaluate(self, code: str, requirement: str) -> dict:
+        import json
+        response = self.client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=1024,
+            system=JUDGE_SYSTEM_PROMPT,
+            messages=[{
+                "role": "user",
+                "content": f"요구사항: {requirement}\n\n코드:\n```python\n{code}\n```"
+            }]
+        )
+        return json.loads(response.content[0].text)
+```
+
+<Aside type="caution" title="LLM-as-Judge의 한계">
+LLM Judge는 논리적 정확성보다 표면적 코드 품질에 편향될 수 있다.
+자동화된 테스트(pytest)와 병행하여 사용해야 신뢰할 수 있다.
+</Aside>
+
+## 실습 (Practicum)
+
+<Steps>
+1. **OpenTelemetry 통합** — Ralph 루프에 추적 및 메트릭 추가
+
+2. **대시보드 구성** — Grafana + Prometheus로 실시간 모니터링
+
+3. **LLM-as-Judge 구현** — `LLMJudge` 클래스 완성 및 실제 코드 평가
+
+4. **비용 최적화 분석** — 토큰 사용량 vs 코드 품질 트레이드오프 분석
+</Steps>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### Lab 11: 텔레메트리 & Lab 12: LLM-as-Judge
+
+**제출 마감**: 2026-05-27 23:59
+
+**Lab 11 요구사항**:
+1. OpenTelemetry 통합된 Ralph 루프
+2. Grafana 대시보드 스크린샷 (loop_count, token_usage, success_rate)
+
+**Lab 12 요구사항**:
+1. `LLMJudge` 완전 구현
+2. 10개 코드 샘플 자동 평가 결과
+3. LLM Judge vs 인간 평가자 상관관계 분석
+
+</div>

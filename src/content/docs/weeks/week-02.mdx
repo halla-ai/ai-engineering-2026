@@ -1,0 +1,147 @@
+---
+title: "2주차: HOTL 거버넌스와 Governance-as-Code"
+description: Human-on-the-Loop 아키텍처 설계와 EU AI Act 컴플라이언스 구현
+week: 2
+phase: 1
+phase_title: 에이전틱 시스템 기초
+date: "2026-03-11"
+theory_topics:
+  - HOTL 거버넌스 상세 설계
+  - EU AI Act 컴플라이언스 요구사항
+  - Governance-as-Code 구현 패턴
+lab_topics:
+  - Hard Interrupt 구현
+  - 감사 로그 시스템 설계
+assignment: "Lab 02: 첫 번째 Claude Code 에이전트"
+assignment_due: "2026-03-18"
+difficulty: 초급
+estimated_time: 4시간
+---
+
+import { Aside, Steps, Tabs, TabItem, Card, CardGrid, Badge } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 1</span>
+  <Badge text="2주차" variant="note" />
+  <Badge text="초급" variant="caution" />
+</div>
+
+## 이론 (Theory)
+
+### HOTL 아키텍처의 핵심 원칙
+
+HOTL 시스템에서 에이전트는 독립적으로 실행되지만, 엔지니어는 세 가지 메커니즘으로 통제권을 유지한다:
+
+1. **Hard Interrupt**: CUD(Create/Update/Delete) 작업에 강제 인간 승인
+2. **Telemetry**: 실시간 신뢰도 임계값 모니터링
+3. **Audit Log**: 모든 에이전트 행동의 불변 기록
+
+### EU AI Act 컴플라이언스
+
+2026년 8월 EU AI Act 완전 적용 이후, 고위험 에이전틱 시스템은 의무적으로:
+- 인간 감독 메커니즘 내장
+- 감사 추적(Audit Trail) 유지
+- 설명 가능성(Explainability) 보장
+
+<Aside type="danger" title="컴플라이언스 실패 시 제재">
+EU AI Act 위반 시 최대 **€4,000만 또는 전 세계 매출의 7%** 과징금. 엔지니어는 Governance-as-Code로 이를 기술적으로 강제해야 한다.
+</Aside>
+
+### Governance-as-Code 패턴
+
+```python
+# governance.py — 에이전트 행동 제약 시스템
+import logging
+from enum import Enum
+from typing import Callable
+
+class ActionRisk(Enum):
+    LOW = "low"       # 자율 실행 허용
+    MEDIUM = "medium" # 로그 기록 후 실행
+    HIGH = "high"     # 인간 승인 필수 (Hard Interrupt)
+
+def governance_check(action: str, risk: ActionRisk) -> bool:
+    """모든 에이전트 행동은 이 함수를 통과해야 한다."""
+    log_action(action, risk)
+
+    if risk == ActionRisk.HIGH:
+        return require_human_approval(action)  # Hard Interrupt
+    elif risk == ActionRisk.MEDIUM:
+        alert_operator(action)
+        return True
+    return True
+
+def log_action(action: str, risk: ActionRisk):
+    """불변 감사 로그 기록"""
+    logging.info(f"AGENT_ACTION | {action} | risk={risk.value}")
+```
+
+## 실습 (Practicum)
+
+### 첫 번째 에이전틱 루프 구현
+
+<Steps>
+1. **프로젝트 초기화**
+
+   ```bash
+   mkdir lab-02-agent && cd lab-02-agent
+   python -m venv venv && source venv/bin/activate
+   pip install anthropic python-dotenv
+   ```
+
+2. **거버넌스 레이어 구현**
+
+   `governance.py` 파일을 생성하고 위의 코드를 기반으로 확장한다.
+
+3. **에이전트 루프 작성**
+
+   ```python
+   # agent.py
+   import anthropic
+   from governance import governance_check, ActionRisk
+
+   client = anthropic.Anthropic()
+
+   def run_agent(task: str):
+       """HOTL 거버넌스가 적용된 에이전트 루프"""
+       response = client.messages.create(
+           model="claude-opus-4-6",
+           max_tokens=1024,
+           messages=[{"role": "user", "content": task}]
+       )
+       action = response.content[0].text
+
+       # 모든 파일 수정은 HIGH risk
+       if "write" in action.lower() or "delete" in action.lower():
+           approved = governance_check(action, ActionRisk.HIGH)
+           if not approved:
+               print("Action blocked by governance layer.")
+               return
+
+       execute_action(action)
+   ```
+
+4. **테스트 실행**
+
+   ```bash
+   python agent.py "현재 디렉토리의 Python 파일 목록을 보여줘"
+   ```
+</Steps>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### Lab 02: 첫 번째 Claude Code 에이전트
+
+**제출 마감**: 2026-03-18 23:59
+
+**제출 경로**: `assignments/week-02/[학번]/`
+
+**요구사항**:
+1. 거버넌스 레이어가 포함된 에이전트 구현
+2. 최소 3가지 ActionRisk 수준 처리
+3. 감사 로그 파일 생성 및 검증
+4. `README.md`에 설계 결정 사항 문서화
+
+</div>

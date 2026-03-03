@@ -1,0 +1,137 @@
+---
+title: "10주차: DeepSeek-Coder-V2와 오픈소스 모델"
+description: 상용 API를 넘어 — 오픈소스 LLM 직접 배포와 경제성 분석
+week: 10
+phase: 4
+phase_title: 오픈소스 모델 & MLOps
+date: "2026-05-06"
+theory_topics:
+  - DeepSeek-Coder-V2 아키텍처 개요
+  - 오픈소스 vs 상용 API 비교
+  - 에이전틱 코딩 도구 생태계
+lab_topics:
+  - vLLM으로 DeepSeek 모델 로드
+  - 추론 서버 성능 벤치마크
+assignment: "Lab 10: vLLM 배포 실습"
+assignment_due: "2026-05-13"
+difficulty: 고급
+estimated_time: 8시간
+---
+
+import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 4</span>
+  <Badge text="10주차" variant="note" />
+  <Badge text="고급" variant="danger" />
+</div>
+
+## 이론 (Theory)
+
+### DeepSeek-Coder-V2 개요
+
+DeepSeek-Coder-V2는 236B 파라미터의 MoE(Mixture-of-Experts) 모델로, 코딩 작업에서 GPT-4o 수준의 성능을 보여준다.
+
+| 특성 | 수치 |
+|------|------|
+| 총 파라미터 | 236B |
+| 활성 파라미터 | 21B (추론 시) |
+| 컨텍스트 창 | 128K 토큰 |
+| 지원 언어 | 338개 프로그래밍 언어 |
+| 라이선스 | DeepSeek License (상용 허용) |
+
+<Aside type="tip" title="MoE 아키텍처의 효율성">
+236B 파라미터 모두를 사용하는 대신, 각 토큰 처리 시 21B만 활성화. H100 1개로도 운영 가능.
+</Aside>
+
+### 오픈소스 vs 상용 API 비교
+
+<CardGrid>
+  <Card title="상용 API (Claude, GPT-4)" icon="external">
+    - 장점: 즉시 사용, 유지보수 불필요
+    - 단점: 데이터 프라이버시, 비용 예측 불가, API 제한
+    - 비용: ~$15/1M 토큰 (input)
+  </Card>
+  <Card title="오픈소스 (DeepSeek + vLLM)" icon="laptop">
+    - 장점: 완전한 제어, 데이터 내부 보관, 비용 예측 가능
+    - 단점: 초기 설정 비용, 유지보수 필요
+    - 비용: H100 서버 비용만 (토큰당 ~$0.001)
+  </Card>
+</CardGrid>
+
+### 에이전틱 코딩 도구 생태계 (2026)
+
+```
+상용 (Commercial)          오픈소스 (Open-weight)
+├── Claude Code (Anthropic) ├── DeepSeek-Coder-V2
+├── Cursor (GPT-4o)        ├── Qwen2.5-Coder-32B
+├── GitHub Copilot         └── Code Llama 3
+└── Amazon Q
+```
+
+## 실습 (Practicum)
+
+### vLLM으로 DeepSeek 배포
+
+<Steps>
+1. **DGX 서버에서 vLLM 설치**
+
+   ```bash
+   # MIG 슬라이스 내에서
+   pip install vllm
+   ```
+
+2. **모델 다운로드 및 서버 실행**
+
+   ```bash
+   python -m vllm.entrypoints.openai.api_server \
+     --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+     --tensor-parallel-size 1 \
+     --max-model-len 32768 \
+     --port 8000
+   ```
+
+3. **OpenAI 호환 API로 테스트**
+
+   ```python
+   import openai
+
+   client = openai.OpenAI(
+       base_url="http://localhost:8000/v1",
+       api_key="token-abc"
+   )
+
+   response = client.chat.completions.create(
+       model="deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+       messages=[{"role": "user", "content": "Python으로 퀵소트 구현해줘"}]
+   )
+   print(response.choices[0].message.content)
+   ```
+
+4. **성능 벤치마크**
+
+   ```bash
+   # 처리량 벤치마크
+   python -m vllm.benchmarks.benchmark_throughput \
+     --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
+     --num-prompts 100 \
+     --input-len 512 \
+     --output-len 128
+   ```
+</Steps>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### Lab 10: vLLM 배포 실습
+
+**제출 마감**: 2026-05-13 23:59
+
+**요구사항**:
+1. DGX 서버에 vLLM 서버 구동 성공 스크린샷
+2. DeepSeek-Coder-V2 vs Claude 코딩 성능 비교 (동일 태스크 5개)
+3. 처리량(tokens/sec) 벤치마크 결과
+4. 비용 분석: API 비용 vs DGX 운영 비용 계산
+
+</div>

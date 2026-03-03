@@ -1,0 +1,357 @@
+---
+title: "Lab 09: QA 에이전트 구현"
+description: QAAgent 클래스, 자동 코드 리뷰, 피드백 루프, end-to-end 시연
+week: 9
+difficulty: 고급
+estimated_time: 8시간
+assignment_due: "2026-05-06"
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+<Badge text="고급" variant="danger" /> <Badge text="마감: 2026-05-06" variant="note" />
+
+## 목표
+
+- `QAAgent` 클래스 구현 — 자동 테스트 실행, 커버리지 측정, 코드 리뷰
+- 코더 에이전트와의 피드백 루프(feedback loop) 구현
+- Planner → Coder → QA 3단계 파이프라인 end-to-end 시연
+
+## QA 에이전트의 역할
+
+QA 에이전트는 코더의 출력을 검증하고 피드백을 제공하는 품질 관문(quality gate)이다.
+
+```
+CoderAgent ──코드변경──▶ QAAgent
+                            ├── pytest 실행
+                            ├── coverage 측정
+                            ├── LLM 코드 리뷰
+                            └── 피드백 판정
+                                  │
+                         통과 ────┴──── 실패 → CoderAgent (재시도)
+                          │
+                     ReviewerAgent
+```
+
+## 구현 요구사항
+
+### 1. `qa_runner.py` — 테스트 실행 엔진
+
+```python
+# qa_runner.py
+import subprocess
+import json
+import re
+from dataclasses import dataclass
+from pathlib import Path
+
+@dataclass
+class TestResult:
+    passed: int
+    failed: int
+    errors: int
+    duration_sec: float
+    coverage_pct: float | None
+    failed_tests: list[str]
+    full_output: str
+
+    @property
+    def all_passed(self) -> bool:
+        return self.failed == 0 and self.errors == 0
+
+    def to_summary(self) -> str:
+        status = "PASS" if self.all_passed else "FAIL"
+        lines = [
+            f"[{status}] 통과: {self.passed} | 실패: {self.failed} | 오류: {self.errors}",
+            f"실행 시간: {self.duration_sec:.2f}초",
+        ]
+        if self.coverage_pct is not None:
+            lines.append(f"커버리지: {self.coverage_pct:.1f}%")
+        if self.failed_tests:
+            lines.append("실패 테스트:")
+            lines.extend(f"  - {t}" for t in self.failed_tests)
+        return "\n".join(lines)
+
+
+class TestRunner:
+    def __init__(self, test_dir: str = "tests/"):
+        self.test_dir = test_dir
+
+    def run(self, with_coverage: bool = True) -> TestResult:
+        cmd = ["python", "-m", "pytest", self.test_dir, "-v", "--tb=short", "--json-report"]
+        if with_coverage:
+            cmd.extend([
+                f"--cov={self.test_dir.replace('tests/', 'src/')}",
+                "--cov-report=json"
+            ])
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        return self._parse_output(result)
+
+    def _parse_output(self, result: subprocess.CompletedProcess) -> TestResult:
+        output = result.stdout + result.stderr
+
+        # pytest JSON 리포트 파싱 (--json-report 사용 시)
+        report_path = Path(".report.json")
+        if report_path.exists():
+            report = json.loads(report_path.read_text())
+            summary = report.get("summary", {})
+            failed_tests = [
+                t["nodeid"] for t in report.get("tests", [])
+                if t["outcome"] in ("failed", "error")
+            ]
+        else:
+            # 폴백: 텍스트 파싱
+            passed  = len(re.findall(r"PASSED", output))
+            failed  = len(re.findall(r"FAILED", output))
+            summary = {"passed": passed, "failed": failed, "error": 0}
+            failed_tests = re.findall(r"FAILED (.+?) -", output)
+
+        # 커버리지 파싱
+        coverage_pct = None
+        cov_path = Path("coverage.json")
+        if cov_path.exists():
+            cov = json.loads(cov_path.read_text())
+            coverage_pct = cov.get("totals", {}).get("percent_covered")
+
+        duration_match = re.search(r"(\d+\.\d+)s", output)
+        duration = float(duration_match.group(1)) if duration_match else 0.0
+
+        return TestResult(
+            passed=summary.get("passed", 0),
+            failed=summary.get("failed", 0),
+            errors=summary.get("error", 0),
+            duration_sec=duration,
+            coverage_pct=coverage_pct,
+            failed_tests=failed_tests,
+            full_output=output[:2000]
+        )
+```
+
+### 2. `code_reviewer.py` — LLM 기반 코드 리뷰어
+
+```python
+# code_reviewer.py
+import subprocess
+import anthropic
+from dataclasses import dataclass
+
+@dataclass
+class ReviewResult:
+    severity: str   # "pass" | "warn" | "block"
+    issues: list[str]
+    suggestions: list[str]
+    score: int      # 0-100
+
+    def should_block(self) -> bool:
+        return self.severity == "block" or self.score < 40
+
+REVIEW_SYSTEM = """
+You are a strict code reviewer. Review the provided git diff and identify:
+1. Security vulnerabilities (BLOCK if found)
+2. Logic errors that tests might miss (BLOCK if severe)
+3. Code style issues (WARN)
+4. Performance concerns (WARN)
+
+Respond in JSON:
+{
+  "severity": "pass|warn|block",
+  "issues": ["issue1", "issue2"],
+  "suggestions": ["suggestion1"],
+  "score": 0-100,
+  "reasoning": "brief explanation"
+}
+"""
+
+class CodeReviewer:
+    def __init__(self):
+        self.client = anthropic.Anthropic()
+
+    def review_diff(self, diff: str) -> ReviewResult:
+        if not diff.strip():
+            return ReviewResult("pass", [], [], 100)
+
+        response = self.client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            system=REVIEW_SYSTEM,
+            messages=[{
+                "role": "user",
+                "content": f"Review this diff:\n```diff\n{diff[:3000]}\n```"
+            }]
+        )
+
+        import json, re
+        text = response.content[0].text
+        match = re.search(r"\{[\s\S]+\}", text)
+        if not match:
+            return ReviewResult("warn", ["리뷰 파싱 실패"], [], 50)
+
+        data = json.loads(match.group())
+        return ReviewResult(
+            severity=data.get("severity", "warn"),
+            issues=data.get("issues", []),
+            suggestions=data.get("suggestions", []),
+            score=data.get("score", 50)
+        )
+
+    def get_diff(self) -> str:
+        result = subprocess.run(
+            ["git", "diff", "HEAD"],
+            capture_output=True, text=True
+        )
+        return result.stdout
+```
+
+### 3. `qa_agent.py` — QA 에이전트 메인
+
+```python
+# qa_agent.py
+from qa_runner import TestRunner, TestResult
+from code_reviewer import CodeReviewer, ReviewResult
+from dataclasses import dataclass
+
+@dataclass
+class QAReport:
+    iteration: int
+    test_result: TestResult
+    review_result: ReviewResult
+    verdict: str         # "approve" | "request_changes" | "reject"
+    feedback: str        # 코더 에이전트에게 전달할 피드백
+
+class QAAgent:
+    MAX_REVIEW_RETRIES = 3
+
+    def __init__(self, test_dir: str = "tests/"):
+        self.runner = TestRunner(test_dir)
+        self.reviewer = CodeReviewer()
+        self.history: list[QAReport] = []
+
+    def evaluate(self, iteration: int = 1) -> QAReport:
+        print(f"[QA] 이터레이션 {iteration} — 테스트 실행 중...")
+        test_result = self.runner.run(with_coverage=True)
+        print(test_result.to_summary())
+
+        print("[QA] 코드 리뷰 중...")
+        diff = self.reviewer.get_diff()
+        review_result = self.reviewer.review_diff(diff)
+
+        verdict, feedback = self._decide(test_result, review_result)
+        report = QAReport(
+            iteration=iteration,
+            test_result=test_result,
+            review_result=review_result,
+            verdict=verdict,
+            feedback=feedback
+        )
+        self.history.append(report)
+        return report
+
+    def _decide(
+        self, test: TestResult, review: ReviewResult
+    ) -> tuple[str, str]:
+        if not test.all_passed:
+            feedback = (
+                f"테스트 {test.failed}개 실패:\n"
+                + "\n".join(f"- {t}" for t in test.failed_tests[:5])
+                + f"\n\n테스트 출력:\n{test.full_output[:500]}"
+            )
+            return "request_changes", feedback
+
+        if review.should_block():
+            feedback = (
+                f"코드 리뷰 차단 (점수: {review.score}/100):\n"
+                + "\n".join(f"- {i}" for i in review.issues)
+            )
+            return "reject", feedback
+
+        if review.severity == "warn":
+            feedback = (
+                "테스트 통과, 경고 사항:\n"
+                + "\n".join(f"- {i}" for i in review.issues)
+            )
+            return "approve", feedback
+
+        coverage = test.coverage_pct or 0
+        if coverage < 70:
+            return "request_changes", f"커버리지 {coverage:.1f}% — 최소 70% 필요"
+
+        return "approve", f"모든 테스트 통과. 커버리지: {coverage:.1f}%"
+```
+
+### 4. end-to-end 파이프라인
+
+```python
+# pipeline_e2e.py
+from planner_agent import PlannerAgent
+from coder_agent import CoderAgent
+from qa_agent import QAAgent
+
+def run_pipeline(objective: str, codebase_root: str = "."):
+    MAX_CODER_RETRIES = 3
+
+    # 1단계: Planning
+    print("=" * 50)
+    print("STAGE 1: PLANNING")
+    planner = PlannerAgent(codebase_root)
+    plan = planner.plan(objective)
+
+    # 2단계: Coding + QA 피드백 루프
+    coder = CoderAgent()
+    qa = QAAgent()
+
+    for attempt in range(1, MAX_CODER_RETRIES + 1):
+        print(f"\n{'=' * 50}")
+        print(f"STAGE 2: CODING (시도 {attempt}/{MAX_CODER_RETRIES})")
+
+        coder_input = {"plan": plan}
+        if attempt > 1 and qa.history:
+            last_feedback = qa.history[-1].feedback
+            coder_input["feedback"] = last_feedback
+            print(f"[Pipeline] QA 피드백 코더에 전달:\n{last_feedback[:200]}")
+
+        coder.run(coder_input)
+
+        print(f"\n{'=' * 50}")
+        print(f"STAGE 3: QA (시도 {attempt})")
+        report = qa.evaluate(iteration=attempt)
+
+        print(f"[Pipeline] QA 판정: {report.verdict}")
+        if report.verdict == "approve":
+            print("[Pipeline] 파이프라인 완료 — 승인")
+            return report
+
+    print(f"[Pipeline] 최대 시도 횟수 초과 — 파이프라인 실패")
+    return qa.history[-1] if qa.history else None
+
+if __name__ == "__main__":
+    result = run_pipeline(
+        objective="divide() 함수에 ZeroDivisionError 처리를 추가하라.",
+        codebase_root="."
+    )
+    if result:
+        print(f"\n최종 결과: {result.verdict}")
+```
+
+<Steps>
+1. `qa_runner.py` 구현: `pip install pytest pytest-json-report pytest-cov`
+2. `code_reviewer.py` 구현 및 단독 테스트: `python -c "from code_reviewer import CodeReviewer; r = CodeReviewer(); print(r.review_diff('+ x = 1/0'))"`
+3. `qa_agent.py` 구현
+4. `pipeline_e2e.py`로 end-to-end 실행
+5. QA가 코더에게 피드백을 보내는 사이클이 최소 1회 이상 발생하는 시나리오 확인
+</Steps>
+
+## 제출물
+
+`assignments/lab-09/[학번]/`에 PR:
+
+- [ ] `qa_runner.py` — pytest 실행 및 커버리지 수집
+- [ ] `code_reviewer.py` — LLM 기반 diff 리뷰
+- [ ] `qa_agent.py` — 판정 로직 포함 완전한 QA 에이전트
+- [ ] `pipeline_e2e.py` — Planner→Coder→QA 3단계 파이프라인
+- [ ] `qa_reports/` — 실제 실행된 QA 보고서 JSON (최소 2회)
+- [ ] `README.md` — end-to-end 실행 결과, 피드백 루프 동작 설명, 커버리지 수치
+
+<Aside type="note" title="평가 포인트">
+단순히 테스트를 실행하는 것보다 LLM 리뷰어가 테스트가 잡지 못한 문제(예: 보안 취약점, 경쟁 조건)를 감지하는 시나리오를 만들어 제출하면 가산점이 주어진다.
+</Aside>

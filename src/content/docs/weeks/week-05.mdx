@@ -1,0 +1,152 @@
+---
+title: "5주차: 컨텍스트 관리와 Context Rot 방지"
+description: 장기 실행 에이전트의 컨텍스트 창 관리 전략 — Context Rot 진단과 처방
+week: 5
+phase: 2
+phase_title: 하네스 엔지니어링
+date: "2026-04-01"
+theory_topics:
+  - Context Rot 현상과 원인
+  - 결정론적 컨텍스트 할당 전략
+  - 상태 추적 파일 설계 패턴
+lab_topics:
+  - 컨텍스트 창 사용량 측정
+  - 상태 추적 시스템 구현
+assignment: "Lab 05: 컨텍스트 관리 실습"
+assignment_due: "2026-04-08"
+difficulty: 중급
+estimated_time: 5시간
+---
+
+import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 2</span>
+  <Badge text="5주차" variant="note" />
+  <Badge text="중급" variant="danger" />
+</div>
+
+## 이론 (Theory)
+
+### Context Rot란?
+
+에이전트가 장시간 실행되면서 컨텍스트 창이 점점 오염되는 현상이다:
+
+```
+초기 상태 (Clean Context):
+[시스템 프롬프트] [태스크 명세] [현재 코드]
+
+30번의 시도 후 (Context Rot):
+[시스템 프롬프트] [태스크 명세] [실패한 시도 #1]
+[에러 로그 #1] [실패한 시도 #2] [에러 로그 #2]
+... (128k 토큰까지 쌓임) ...
+→ 환각 발생, 추론 품질 급락
+```
+
+<Aside type="danger" title="Context Rot 증상">
+- 이전에 작동했던 함수를 "존재하지 않는다"고 주장
+- 같은 실수를 반복
+- 오래된 코드 스니펫을 최신 버전으로 혼동
+- 응답이 길어지고 요점을 잃어버림
+</Aside>
+
+### Ralph 루프의 해법: Context Window Wiping
+
+Ralph 루프의 핵심 혁신 중 하나는 **태스크 완료 또는 실패 후 컨텍스트를 완전히 초기화**하는 것이다:
+
+```python
+class RalphContextManager:
+    def __init__(self, max_tokens: int = 100_000):
+        self.max_tokens = max_tokens
+        self.state_file = "claude-progress.txt"
+
+    def should_wipe_context(self, current_tokens: int) -> bool:
+        """컨텍스트 창의 75% 이상 사용 시 초기화"""
+        return current_tokens > self.max_tokens * 0.75
+
+    def build_fresh_context(self) -> str:
+        """상태 파일에서 결정론적으로 컨텍스트 재구성"""
+        state = self.load_state()
+        return f"""
+# 프로젝트 상태
+{state['completed_tasks']}
+
+# 현재 태스크
+{state['current_task']}
+
+# 관련 코드 (현재 버전만)
+{state['relevant_code_snippet']}
+"""
+
+    def save_state(self, task: str, status: str):
+        """다음 루프를 위한 상태 저장"""
+        with open(self.state_file, 'a') as f:
+            f.write(f"[{status}] {task}\n")
+```
+
+### 상태 추적 파일 설계 패턴
+
+```
+claude-progress.txt  ← 완료/실패 태스크 기록
+fix_plan.md         ← 구조화된 태스크 큐
+@codebase_map.md    ← 파일 구조 스냅샷 (최신 유지)
+```
+
+**`fix_plan.md` 템플릿**:
+```markdown
+# 프로젝트: Calculator App
+## 완료된 태스크
+- [x] 기본 파일 구조 생성 (2026-04-01 14:23)
+- [x] add() 함수 구현 및 테스트 통과 (2026-04-01 14:45)
+
+## 현재 태스크
+- [ ] subtract() 함수 구현
+  - 예상 파일: calculator.py:15-25
+  - 관련 테스트: tests/test_calculator.py:20-35
+
+## 대기 중인 태스크
+- [ ] multiply() 함수
+- [ ] divide() 함수 (0 나눗셈 예외 처리 필수)
+```
+
+## 실습 (Practicum)
+
+<Steps>
+1. **토큰 카운터 통합**
+
+   ```python
+   import anthropic
+
+   def count_tokens(messages: list) -> int:
+       client = anthropic.Anthropic()
+       response = client.messages.count_tokens(
+           model="claude-opus-4-6",
+           messages=messages
+       )
+       return response.input_tokens
+   ```
+
+2. **자동 컨텍스트 모니터링**
+
+   현재 컨텍스트 토큰 수를 매 루프마다 측정하고, 임계값 초과 시 자동 초기화하는 시스템을 구현한다.
+
+3. **상태 파일 시스템 구축**
+
+   `fix_plan.md`와 `claude-progress.txt`를 자동으로 업데이트하는 헬퍼 함수를 작성한다.
+</Steps>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### Lab 05: 컨텍스트 관리 실습
+
+**제출 마감**: 2026-04-08 23:59
+
+**요구사항**:
+1. 토큰 카운터 통합된 Ralph 루프 (`ralph_with_context.sh`)
+2. Context Rot 시뮬레이션 및 측정 결과 그래프
+3. 자동 컨텍스트 초기화 로직 구현
+4. 상태 추적 시스템 (`fix_plan.md` + `claude-progress.txt`) 동작 증명
+
+</div>

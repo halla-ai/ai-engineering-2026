@@ -1,0 +1,250 @@
+---
+title: "Lab 06: 인스트럭션 튜닝"
+description: 반복 오류 패턴 분석, PROMPT.md 고도화, A/B 테스트
+week: 6
+difficulty: 중급
+estimated_time: 4시간
+assignment_due: "2026-04-15"
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+<Badge text="중급" variant="tip" /> <Badge text="마감: 2026-04-15" variant="note" />
+
+## 목표
+
+- Ralph 루프 실행 로그에서 반복 오류 패턴을 추출하고 분류
+- 오류 패턴을 반영해 `PROMPT.md`를 체계적으로 개선
+- 두 버전의 PROMPT.md를 A/B 테스트로 성능 비교
+
+## 인스트럭션 튜닝이란
+
+프롬프트 엔지니어링에서 "튜닝"이란 모델 가중치를 건드리는 것이 아니라, 지시문(PROMPT.md)을 반복적으로 개선해 에이전트의 행동을 원하는 방향으로 조정하는 과정이다. 핵심은 로그 기반의 데이터 드리븐 접근이다.
+
+```
+harness.log 분석 → 오류 패턴 추출 → PROMPT.md 수정 → A/B 테스트 → 반복
+```
+
+## 구현 요구사항
+
+### 1. `log_analyzer.py` — 오류 패턴 분석기
+
+```python
+# log_analyzer.py
+import re
+from collections import Counter
+from pathlib import Path
+from dataclasses import dataclass
+
+@dataclass
+class ErrorPattern:
+    pattern: str
+    count: int
+    examples: list[str]
+    category: str  # "syntax" | "logic" | "timeout" | "api" | "other"
+
+class LogAnalyzer:
+    """harness.log에서 반복 오류 패턴을 추출한다."""
+
+    ERROR_REGEXES = {
+        "syntax": r"SyntaxError|IndentationError|NameError",
+        "logic":  r"AssertionError|assert .+ == .+|FAILED tests/",
+        "timeout": r"TimeoutError|timed out|Killed",
+        "api":    r"anthropic\.APIError|RateLimitError|overloaded",
+    }
+
+    def __init__(self, log_path: str):
+        self.lines = Path(log_path).read_text().splitlines()
+
+    def extract_errors(self) -> list[ErrorPattern]:
+        raw_errors: list[str] = []
+        for i, line in enumerate(self.lines):
+            if any(kw in line for kw in ["ERROR", "FAILED", "Error", "Exception"]):
+                # 전후 2줄 포함해 컨텍스트 수집
+                ctx_start = max(0, i - 1)
+                ctx_end   = min(len(self.lines), i + 3)
+                raw_errors.append("\n".join(self.lines[ctx_start:ctx_end]))
+
+        # 카테고리별 분류
+        categorized: dict[str, list[str]] = {k: [] for k in self.ERROR_REGEXES}
+        categorized["other"] = []
+
+        for err in raw_errors:
+            matched = False
+            for cat, pattern in self.ERROR_REGEXES.items():
+                if re.search(pattern, err):
+                    categorized[cat].append(err)
+                    matched = True
+                    break
+            if not matched:
+                categorized["other"].append(err)
+
+        results = []
+        for cat, errors in categorized.items():
+            if not errors:
+                continue
+            counter = Counter(errors)
+            results.append(ErrorPattern(
+                pattern=cat,
+                count=len(errors),
+                examples=list(counter.most_common(3)),  # 상위 3개 예시
+                category=cat
+            ))
+        return sorted(results, key=lambda x: x.count, reverse=True)
+
+    def generate_report(self) -> str:
+        patterns = self.extract_errors()
+        lines = ["# 오류 패턴 분석 보고서\n"]
+        for p in patterns:
+            lines.append(f"## [{p.category.upper()}] — {p.count}회")
+            lines.append(f"\n대표 예시:\n```\n{p.examples[0][0][:300]}\n```\n")
+        return "\n".join(lines)
+```
+
+### 2. PROMPT.md v1 (기준선)
+
+```markdown
+# Role
+You are an autonomous coding agent fixing bugs in Python code.
+
+# Task
+Make all pytest tests pass without modifying test files.
+
+# Done
+Write DONE.md when all tests pass.
+```
+
+### 3. PROMPT.md v2 (개선 버전)
+
+v1의 문제점을 분석한 뒤 다음 요소를 추가한다.
+
+```markdown
+# Role
+You are an autonomous coding agent. Your sole objective is to make all
+pytest tests pass in `tests/`. Do NOT modify test files.
+
+# Before You Start
+1. Read `fix_plan.md` if it exists — contains prior analysis
+2. Run `pytest tests/ -q --tb=short` to see current failures
+3. Read only the files relevant to failing tests
+
+# Coding Rules
+- Change the minimal amount of code needed to fix each failure
+- After each fix, run pytest immediately to verify
+- Do NOT refactor working code
+- Do NOT add new dependencies
+
+# When Stuck (same error 2+ times)
+1. Write your analysis to `fix_plan.md`:
+   - Exact error message
+   - Root cause hypothesis
+   - Two alternative solutions
+2. Try the first alternative
+
+# Completion
+When `pytest tests/ -q` exits 0, write `DONE.md` with:
+- Number of files changed
+- Brief description of each fix
+- Total iterations used
+```
+
+<Aside type="tip" title="v1 vs v2 핵심 차이">
+v2가 v1보다 나은 이유: (1) 시작 전 현황 파악 지시, (2) 최소 변경 원칙 명시, (3) 동일 오류 반복 시 탈출 전략, (4) 완료 조건의 구체적 포맷 지정.
+</Aside>
+
+### 4. `ab_test.py` — A/B 테스트 하네스
+
+```python
+# ab_test.py
+import subprocess
+import time
+import json
+from pathlib import Path
+from dataclasses import dataclass, asdict
+
+@dataclass
+class ABResult:
+    variant: str          # "v1" or "v2"
+    iterations: int
+    success: bool
+    duration_sec: float
+    final_test_output: str
+
+def run_variant(prompt_path: str, variant: str, max_iter: int = 8) -> ABResult:
+    """단일 변형(variant)을 실행하고 결과를 반환한다."""
+    # 초기 상태 초기화
+    for f in ["DONE.md", "fix_plan.md", "harness.log"]:
+        Path(f).unlink(missing_ok=True)
+
+    # 버그 있는 초기 코드 복원
+    subprocess.run(["git", "checkout", "src/"], capture_output=True)
+
+    env = {"MAX_ITER": str(max_iter), "PROMPT_FILE": prompt_path}
+    start = time.time()
+
+    result = subprocess.run(
+        ["bash", "harness.sh"],
+        capture_output=True,
+        text=True,
+        env={**__import__("os").environ, **env}
+    )
+    duration = time.time() - start
+
+    # 이터레이션 횟수 파싱
+    log = Path("harness.log").read_text() if Path("harness.log").exists() else ""
+    iterations = log.count("=== 이터레이션")
+
+    # 최종 테스트 결과
+    test_result = subprocess.run(
+        ["python", "-m", "pytest", "tests/", "-q", "--tb=no"],
+        capture_output=True, text=True
+    )
+
+    return ABResult(
+        variant=variant,
+        iterations=iterations,
+        success=test_result.returncode == 0,
+        duration_sec=round(duration, 1),
+        final_test_output=test_result.stdout
+    )
+
+def compare(v1_result: ABResult, v2_result: ABResult):
+    print("\n===== A/B 테스트 결과 =====")
+    for r in [v1_result, v2_result]:
+        status = "성공" if r.success else "실패"
+        print(f"[{r.variant}] {status} | {r.iterations}회 이터레이션 | {r.duration_sec}초")
+    if v1_result.success and v2_result.success:
+        diff = v1_result.iterations - v2_result.iterations
+        print(f"\nv2가 {abs(diff)}회 {'적게' if diff > 0 else '많이'} 이터레이션 사용")
+
+if __name__ == "__main__":
+    r1 = run_variant("prompt_v1.md", "v1")
+    r2 = run_variant("prompt_v2.md", "v2")
+    compare(r1, r2)
+    Path("ab_results.json").write_text(
+        json.dumps([asdict(r1), asdict(r2)], indent=2, ensure_ascii=False)
+    )
+```
+
+<Steps>
+1. Lab 04의 `harness.log`를 `log_analyzer.py`로 분석
+2. 분석 결과를 바탕으로 `prompt_v2.md` 작성
+3. `python ab_test.py` 실행
+4. `ab_results.json` 검토 — 어느 버전이 더 빨리 테스트를 통과했는가?
+5. v2가 개선되지 않았다면 이유를 분석하고 `prompt_v3.md` 초안 작성
+</Steps>
+
+## 제출물
+
+`assignments/lab-06/[학번]/`에 PR:
+
+- [ ] `log_analyzer.py` — 오류 패턴 분류 및 보고서 생성
+- [ ] `error_report.md` — `log_analyzer.py` 출력 결과
+- [ ] `prompt_v1.md`, `prompt_v2.md` — A/B 테스트 두 변형
+- [ ] `ab_test.py` — 자동화된 비교 스크립트
+- [ ] `ab_results.json` — 실제 실행 결과
+- [ ] `README.md` — v1 대비 v2 개선 사항 분석 및 추가 개선 제안
+
+<Aside type="note" title="평가 기준">
+단순히 v2가 v1보다 빠른 것을 확인하는 것보다, 왜 특정 지시문이 더 효과적인지 데이터로 설명하는 것이 중요하다.
+</Aside>

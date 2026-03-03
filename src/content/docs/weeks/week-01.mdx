@@ -1,0 +1,168 @@
+---
+title: "1주차: 코스 오리엔테이션"
+description: AI 엔지니어링 패러다임 전환 — HITL에서 HOTL로
+week: 1
+phase: 1
+phase_title: 에이전틱 시스템 기초
+date: "2026-03-04"
+theory_topics:
+  - AI 엔지니어링 2026 패러다임 전환 개요
+  - Human-in-the-Loop(HITL) vs Human-on-the-Loop(HOTL)
+  - 코스 구조 및 평가 안내
+lab_topics:
+  - 개발 환경 설정
+  - Claude Code 설치 및 첫 실행
+assignment: "Lab 01: 개발 환경 설정"
+assignment_due: "2026-03-11"
+difficulty: 입문
+estimated_time: 3시간
+---
+
+import { Aside, Steps, Tabs, TabItem, Card, CardGrid, Badge } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 1</span>
+  <Badge text="1주차" variant="note" />
+  <Badge text="입문" variant="success" />
+  <Badge text="강의일: 2026-03-04" variant="default" />
+</div>
+
+## 이론 (Theory)
+
+### AI 엔지니어링의 패러다임 전환
+
+2025–2026년 AI 산업은 근본적인 전환점을 맞이했다. LLM을 단순한 텍스트 생성 도구로 활용하던 시대가 끝나고, **자율 에이전틱 시스템**이 소프트웨어 개발의 주류가 되었다.
+
+<CardGrid>
+  <Card title="Before (2023–2024)" icon="close">
+    - LLM = 코드 제안 도구 (Copilot)
+    - 인간이 모든 코드를 검토·승인
+    - AI는 수동적 "오라클"
+  </Card>
+  <Card title="After (2025–2026)" icon="approve-check-circle">
+    - LLM = 자율 실행 에이전트
+    - 인간은 전략적 감독자
+    - AI가 파일 수정·테스트·배포 직접 수행
+  </Card>
+</CardGrid>
+
+### HITL vs HOTL 거버넌스 아키텍처
+
+| 구분 | Human-in-the-Loop (HITL) | Human-on-the-Loop (HOTL) |
+|------|--------------------------|--------------------------|
+| **인간 역할** | 순차적 게이트키퍼 | 전략적 감독자 |
+| **AI 실행** | 인간 승인 후 실행 | 자율 실행, 인간은 모니터링 |
+| **속도** | 낮음 (병목 발생) | 높음 (병렬 처리 가능) |
+| **활용 예** | 프로덕션 DB 수정 | CI/CD 파이프라인, 코드 생성 |
+| **규제 요건** | EU AI Act 고위험 시스템 | 텔레메트리 + 감사 로그 필수 |
+
+<Aside type="note" title="Human-in-Command (HIC)">
+HOTL보다 상위 개념으로, AI가 실행하는 동안 인간이 **전체 전략과 경계 조건**을 설정하는 아키텍처. 이 강의의 궁극적 목표는 HIC 엔지니어를 양성하는 것이다.
+</Aside>
+
+### 이 강의에서 만드는 것
+
+15주 후, 여러분은 다음 시스템을 완전히 구현하게 된다:
+
+```
+Human (HIC)
+    ↓ 전략 설정
+Planner Agent → 명세서(spec.md) 생성
+    ↓
+Coder Agent (Ralph Loop) → 코드 작성 + 자동 테스트
+    ↓
+QA Agent → 독립 검증 + 회귀 테스트
+    ↓
+Deploy Agent → 자동 배포
+```
+
+## 실습 (Practicum)
+
+<Aside type="tip" title="오늘의 실습 목표">
+Claude Code를 설치하고, DGX H100 서버에 접속하여 첫 번째 에이전틱 루프를 실행한다.
+</Aside>
+
+### 로컬 환경 준비
+
+<Steps>
+1. **Node.js 20 LTS 설치**
+
+   ```bash
+   # macOS (Homebrew)
+   brew install node@20
+
+   # Ubuntu/Debian
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt-get install -y nodejs
+   ```
+
+2. **Claude Code CLI 설치**
+
+   ```bash
+   npm install -g @anthropic-ai/claude-code
+   claude --version  # 버전 확인
+   ```
+
+3. **API 키 설정**
+
+   ```bash
+   export ANTHROPIC_API_KEY="sk-ant-..."
+   # 또는 ~/.bashrc / ~/.zshrc에 추가
+   ```
+
+4. **첫 번째 실행 테스트**
+
+   ```bash
+   mkdir ~/test-project && cd ~/test-project
+   claude "Hello! 이 디렉토리에 간단한 Python hello world 파일을 만들어줘."
+   ```
+</Steps>
+
+### DGX 서버 접속
+
+<Tabs>
+  <TabItem label="SSH 접속">
+    ```bash
+    ssh [학번]@dgx.chu.ac.kr
+    # 초기 비밀번호는 학번과 동일 — 첫 접속 시 반드시 변경!
+    ```
+  </TabItem>
+  <TabItem label="JupyterHub">
+    브라우저에서 `https://jupyter.chu.ac.kr` 접속 후 학번으로 로그인
+  </TabItem>
+  <TabItem label="VS Code Remote">
+    ```bash
+    # VS Code Remote SSH 확장 설치 후
+    # Ctrl+Shift+P → Remote-SSH: Connect to Host
+    # → dgx.chu.ac.kr
+    ```
+  </TabItem>
+</Tabs>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### Lab 01: 개발 환경 설정
+
+**제출 마감**: 2026-03-11 23:59
+
+**제출 방법**: `assignments/week-01/[학번]/` 폴더에 PR
+
+**요구사항**:
+1. Claude Code 설치 후 `claude --version` 출력 스크린샷
+2. DGX 서버 SSH 접속 성공 스크린샷
+3. `hello_agent.py` — Claude Code로 생성한 간단한 Python 파일
+4. `README.md` — 설치 과정에서 겪은 문제와 해결 방법 기록
+
+**평가 기준**:
+- [ ] 환경 설정 완료 (50점)
+- [ ] DGX 접속 확인 (30점)
+- [ ] 트러블슈팅 기록 (20점)
+
+</div>
+
+## 다음 주 예고
+
+2주차에서는 HOTL 거버넌스의 구체적 구현 방법과 **EU AI Act 컴플라이언스** 요구사항을 다룬다.
+특히 "Governance-as-Code" — 코드로 거버넌스 정책을 강제하는 방법을 실습한다.

@@ -1,0 +1,277 @@
+---
+title: "Lab 05: 컨텍스트 관리 실습"
+description: 토큰 카운터 통합, 상태 추적 시스템(fix_plan.md, claude-progress.txt)
+week: 5
+difficulty: 중급
+estimated_time: 5시간
+assignment_due: "2026-04-08"
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+<Badge text="중급" variant="tip" /> <Badge text="마감: 2026-04-08" variant="note" />
+
+## 목표
+
+- Claude API의 토큰 사용량을 실시간으로 추적하는 카운터 구현
+- 롤링 컨텍스트 윈도우로 긴 대화를 관리하는 기법 적용
+- `fix_plan.md`, `claude-progress.txt`를 활용한 세션 간 상태 지속성 확보
+
+## 컨텍스트 관리의 중요성
+
+Claude의 컨텍스트 윈도우(200K 토큰)는 크지만 무한하지 않다. 긴 Ralph 루프나 대규모 코드베이스 작업에서는 컨텍스트 초과(context overflow)가 발생할 수 있다. 이를 방지하기 위해 다음 세 가지를 구현한다.
+
+- 토큰 카운터: 현재 사용량을 추적하고 임계값 초과 시 경고
+- 컨텍스트 압축: 오래된 메시지를 요약으로 대체
+- 상태 파일: 세션 종료 후에도 진행 상황을 파일로 보존
+
+## 구현 요구사항
+
+### 1. `token_counter.py` — 토큰 카운터
+
+```python
+# token_counter.py
+import anthropic
+from dataclasses import dataclass, field
+from typing import Literal
+
+@dataclass
+class TokenUsage:
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read_tokens: int = 0
+    cache_write_tokens: int = 0
+
+    @property
+    def total(self) -> int:
+        return self.input_tokens + self.output_tokens
+
+    @property
+    def cost_usd(self) -> float:
+        # Claude Sonnet 4 기준 (2026년 3월)
+        input_cost  = self.input_tokens  * 3.0 / 1_000_000
+        output_cost = self.output_tokens * 15.0 / 1_000_000
+        cache_read  = self.cache_read_tokens * 0.3 / 1_000_000
+        return input_cost + output_cost + cache_read
+
+    def __add__(self, other: "TokenUsage") -> "TokenUsage":
+        return TokenUsage(
+            input_tokens=self.input_tokens + other.input_tokens,
+            output_tokens=self.output_tokens + other.output_tokens,
+            cache_read_tokens=self.cache_read_tokens + other.cache_read_tokens,
+            cache_write_tokens=self.cache_write_tokens + other.cache_write_tokens,
+        )
+
+
+class TokenCounter:
+    CONTEXT_LIMIT = 200_000
+    WARN_THRESHOLD = 0.80  # 80% 초과 시 경고
+
+    def __init__(self):
+        self.session_usage = TokenUsage()
+        self.turn_history: list[TokenUsage] = []
+
+    def record(self, response: anthropic.types.Message) -> TokenUsage:
+        usage = TokenUsage(
+            input_tokens=response.usage.input_tokens,
+            output_tokens=response.usage.output_tokens,
+            cache_read_tokens=getattr(response.usage, "cache_read_input_tokens", 0),
+            cache_write_tokens=getattr(response.usage, "cache_creation_input_tokens", 0),
+        )
+        self.session_usage = self.session_usage + usage
+        self.turn_history.append(usage)
+        self._check_threshold(response.usage.input_tokens)
+        return usage
+
+    def _check_threshold(self, current_input: int):
+        ratio = current_input / self.CONTEXT_LIMIT
+        if ratio > self.WARN_THRESHOLD:
+            print(
+                f"[WARNING] 컨텍스트 사용률 {ratio:.1%} "
+                f"({current_input:,} / {self.CONTEXT_LIMIT:,} 토큰) — 압축 권장"
+            )
+
+    def report(self) -> str:
+        lines = [
+            "=== 토큰 사용 현황 ===",
+            f"총 입력 토큰:  {self.session_usage.input_tokens:>10,}",
+            f"총 출력 토큰:  {self.session_usage.output_tokens:>10,}",
+            f"캐시 읽기:     {self.session_usage.cache_read_tokens:>10,}",
+            f"예상 비용(USD): ${self.session_usage.cost_usd:>9.4f}",
+            f"누적 턴 수:    {len(self.turn_history):>10}",
+        ]
+        return "\n".join(lines)
+```
+
+### 2. `context_manager.py` — 롤링 윈도우
+
+```python
+# context_manager.py
+import anthropic
+from token_counter import TokenCounter
+
+class ContextManager:
+    """롤링 윈도우 방식으로 메시지 히스토리를 관리한다."""
+
+    MAX_MESSAGES = 20       # 보존할 최대 메시지 수
+    COMPRESS_ABOVE = 15     # 이 수 초과 시 오래된 메시지 압축
+
+    def __init__(self, client: anthropic.Anthropic):
+        self.client = client
+        self.messages: list[dict] = []
+        self.counter = TokenCounter()
+        self.compressed_count = 0
+
+    def add_user(self, content: str):
+        self.messages.append({"role": "user", "content": content})
+
+    def call(self, system: str = "") -> str:
+        if len(self.messages) > self.COMPRESS_ABOVE:
+            self._compress_old_messages()
+
+        kwargs = {
+            "model": "claude-sonnet-4-6",
+            "max_tokens": 4096,
+            "messages": self.messages,
+        }
+        if system:
+            kwargs["system"] = system
+
+        response = self.client.messages.create(**kwargs)
+        self.counter.record(response)
+
+        assistant_msg = response.content[0].text
+        self.messages.append({"role": "assistant", "content": assistant_msg})
+        return assistant_msg
+
+    def _compress_old_messages(self):
+        """오래된 메시지를 요약본으로 대체한다."""
+        keep_recent = 6  # 최신 6개 메시지는 원본 보존
+        old = self.messages[:-keep_recent]
+        recent = self.messages[-keep_recent:]
+
+        summary_prompt = (
+            "다음 대화 내용을 3-5문장으로 요약해줘. "
+            "핵심 결정사항과 발견한 버그에 집중할 것:\n\n"
+            + "\n".join(
+                f"[{m['role']}]: {m['content'][:200]}" for m in old
+            )
+        )
+        response = self.client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=512,
+            messages=[{"role": "user", "content": summary_prompt}]
+        )
+        summary = response.content[0].text
+        self.compressed_count += len(old)
+
+        self.messages = [
+            {"role": "user", "content": f"[이전 대화 요약]\n{summary}"},
+            {"role": "assistant", "content": "이전 컨텍스트를 확인했습니다. 계속 진행하겠습니다."},
+            *recent
+        ]
+        print(f"[ContextManager] {len(old)}개 메시지 압축 완료 (누적: {self.compressed_count}개)")
+```
+
+### 3. 상태 추적 파일 시스템
+
+Ralph 루프가 중단되더라도 진행 상황을 보존하는 파일 기반 상태 시스템이다.
+
+```python
+# state_tracker.py
+import json
+from datetime import datetime
+from pathlib import Path
+
+class StateTracker:
+    """세션 간 상태를 파일로 저장하고 복원한다."""
+
+    def __init__(self, base_dir: str = "."):
+        self.base = Path(base_dir)
+        self.progress_file = self.base / "claude-progress.txt"
+        self.fix_plan_file = self.base / "fix_plan.md"
+
+    def save_progress(self, iteration: int, status: str, notes: str = ""):
+        timestamp = datetime.now().isoformat()
+        entry = f"[{timestamp}] iter={iteration} status={status}"
+        if notes:
+            entry += f"\n  Notes: {notes}"
+        entry += "\n"
+
+        with open(self.progress_file, "a") as f:
+            f.write(entry)
+
+    def load_progress(self) -> list[str]:
+        if not self.progress_file.exists():
+            return []
+        return self.progress_file.read_text().splitlines()
+
+    def save_fix_plan(self, error: str, analysis: str, next_steps: list[str]):
+        error_block = "~~~\n" + error + "\n~~~"
+        steps_block = "\n".join(f"- {s}" for s in next_steps)
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+        content = f"# Fix Plan\nUpdated: {timestamp}\n\n## 현재 오류\n{error_block}\n\n## 분석\n{analysis}\n\n## 다음 시도\n{steps_block}\n"
+        self.fix_plan_file.write_text(content)
+
+    def load_fix_plan(self) -> str | None:
+        if not self.fix_plan_file.exists():
+            return None
+        return self.fix_plan_file.read_text()
+
+    def get_last_status(self) -> str:
+        lines = self.load_progress()
+        return lines[-1] if lines else "no prior progress"
+```
+
+### 4. 통합 실습
+
+위 세 모듈을 연동하는 메인 스크립트를 작성한다.
+
+```python
+# main.py
+import anthropic
+from token_counter import TokenCounter
+from context_manager import ContextManager
+from state_tracker import StateTracker
+
+client = anthropic.Anthropic()
+ctx = ContextManager(client)
+tracker = StateTracker()
+
+# 이전 세션 상태 로드
+prior = tracker.load_fix_plan()
+if prior:
+    ctx.add_user(f"이전 세션에서 작성한 fix_plan.md:\n{prior}\n\n이 계획을 참고해서 계속 진행해줘.")
+else:
+    ctx.add_user("tests/ 디렉터리의 모든 테스트를 통과시켜줘.")
+
+for i in range(5):
+    response = ctx.call(system="You are an autonomous coding agent.")
+    tracker.save_progress(i + 1, "running", response[:100])
+    print(f"\n--- Turn {i+1} ---\n{response[:300]}")
+
+print("\n" + ctx.counter.report())
+```
+
+<Steps>
+1. 세 모듈 구현 (`token_counter.py`, `context_manager.py`, `state_tracker.py`)
+2. `main.py` 실행 후 `claude-progress.txt` 생성 확인
+3. 실행 도중 Ctrl+C로 중단 후 재실행 — 이전 상태 복원 확인
+4. 20턴 이상 대화 후 압축 동작 확인
+5. `counter.report()` 출력에서 비용 확인
+</Steps>
+
+## 제출물
+
+`assignments/lab-05/[학번]/`에 PR:
+
+- [ ] `token_counter.py` — `TokenUsage`, `TokenCounter` 클래스
+- [ ] `context_manager.py` — 롤링 윈도우 및 압축 로직
+- [ ] `state_tracker.py` — `fix_plan.md`, `claude-progress.txt` 관리
+- [ ] `main.py` — 세 모듈을 연동한 실행 예제
+- [ ] `claude-progress.txt` — 실제 실행 결과 (최소 5개 항목)
+- [ ] `README.md` — 컨텍스트 압축이 발생한 시점과 토큰 사용 현황 분석
+
+<Aside type="tip" title="캐시 활용">
+동일한 시스템 프롬프트를 반복 사용할 때는 `cache_control` 파라미터로 프롬프트 캐싱을 활성화하면 비용을 최대 90%까지 절감할 수 있다.
+</Aside>

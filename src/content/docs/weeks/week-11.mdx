@@ -1,0 +1,109 @@
+---
+title: "11주차: vLLM 고처리량 추론 최적화"
+description: CUDA 최적화, PagedAttention, 배치 처리 — 프로덕션 LLM 서버 운영
+week: 11
+phase: 4
+phase_title: 오픈소스 모델 & MLOps
+date: "2026-05-13"
+theory_topics:
+  - PagedAttention 알고리즘
+  - CUDA 메모리 최적화
+  - 배치 처리와 스케줄링
+lab_topics:
+  - vLLM 설정 최적화
+  - 멀티 모델 서빙
+assignment: "실습 병행 진행 (Lab 11 준비)"
+assignment_due: "2026-05-20"
+difficulty: 고급
+estimated_time: 6시간
+---
+
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 4</span>
+  <Badge text="11주차" variant="note" />
+  <Badge text="고급" variant="danger" />
+</div>
+
+## 이론 (Theory)
+
+### PagedAttention: vLLM의 핵심 혁신
+
+전통적 LLM 추론은 KV 캐시(Key-Value Cache)를 연속된 메모리 블록으로 할당하여 심각한 메모리 낭비가 발생한다. vLLM의 **PagedAttention**은 OS의 가상 메모리 페이징 개념을 KV 캐시에 적용한다.
+
+```
+전통 방식: 최대 길이를 위한 연속 메모리 예약
+[KV캐시: 100% 예약] → 실제 사용: 30% → 낭비: 70%
+
+PagedAttention:
+[블록 1] [블록 2] [블록 3] → 필요한 만큼만 동적 할당
+메모리 낭비: ~4% (블록 단편화만)
+```
+
+### vLLM 최적화 설정
+
+```python
+# 프로덕션 vLLM 설정
+from vllm import LLM, SamplingParams
+
+llm = LLM(
+    model="deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+    # 메모리 설정
+    gpu_memory_utilization=0.90,  # GPU 메모리 90% 활용
+    max_model_len=32768,
+    # 성능 최적화
+    enable_prefix_caching=True,   # 반복 프롬프트 캐싱
+    enable_chunked_prefill=True,  # 청크 단위 prefill
+    # MIG 환경
+    tensor_parallel_size=1,       # MIG 슬라이스 1개
+)
+
+# 배치 처리
+requests = [
+    "Python으로 퀵소트 구현",
+    "JavaScript로 이진 탐색 구현",
+    "Go로 HTTP 서버 구현",
+]
+
+sampling_params = SamplingParams(
+    temperature=0.1,  # 코드 생성: 낮은 temperature
+    top_p=0.9,
+    max_tokens=1024,
+)
+
+outputs = llm.generate(requests, sampling_params)
+```
+
+<Aside type="tip" title="Prefix Caching 활용">
+Ralph 루프에서 시스템 프롬프트(PROMPT.md)는 매 루프마다 동일하다.
+`enable_prefix_caching=True`로 시스템 프롬프트 KV 캐시를 재사용하면 처리량이 2-5배 향상된다.
+</Aside>
+
+### MIG 슬라이스별 멀티 모델 서빙
+
+```bash
+# 학생 A: DeepSeek (MIG 슬라이스 1)
+CUDA_VISIBLE_DEVICES=MIG-GPU-xxx python -m vllm.entrypoints.openai.api_server \
+  --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct --port 8001
+
+# 학생 B: Qwen2.5-Coder (MIG 슬라이스 2)
+CUDA_VISIBLE_DEVICES=MIG-GPU-yyy python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-Coder-32B-Instruct --port 8002
+```
+
+## 실습 (Practicum)
+
+<Steps>
+1. **vLLM 최적화 설정 적용** — `gpu_memory_utilization`, `enable_prefix_caching` 설정 비교
+
+2. **배치 처리 구현** — 동시 요청 처리 및 처리량 측정
+
+3. **Prefix Caching 효과 검증** — Ralph 루프 시뮬레이션으로 캐시 히트율 측정
+
+4. **성능 프로파일링** — `nvidia-smi dmon`으로 GPU 사용률 모니터링
+</Steps>
+
+## 다음 주 예고
+
+12주차에서는 이 vLLM 서버 위에 **텔레메트리 시스템**을 구축하고, **LLM-as-Judge** 평가 프레임워크를 구현한다.

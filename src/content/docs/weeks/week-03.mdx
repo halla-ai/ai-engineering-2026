@@ -1,0 +1,166 @@
+---
+title: "3주차: MIG 인프라와 MCP"
+description: NVIDIA Multi-Instance GPU 기술과 Model Context Protocol 연동
+week: 3
+phase: 1
+phase_title: 에이전틱 시스템 기초
+date: "2026-03-18"
+theory_topics:
+  - NVIDIA MIG (Multi-Instance GPU) 기술 원리
+  - Kubernetes 오케스트레이션
+  - Model Context Protocol (MCP) 아키텍처
+lab_topics:
+  - MCP 서버 구성
+  - DGX 클러스터 접속 및 MIG 슬라이스 할당
+assignment: "Lab 03: MCP 서버 구성"
+assignment_due: "2026-03-25"
+difficulty: 초급
+estimated_time: 5시간
+---
+
+import { Aside, Steps, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 1</span>
+  <Badge text="3주차" variant="note" />
+  <Badge text="초급" variant="caution" />
+</div>
+
+## 이론 (Theory)
+
+### Multi-Instance GPU (MIG) 기술
+
+NVIDIA H100 GPU는 MIG 기술로 최대 **7개의 독립 인스턴스**로 분할 가능하다. 각 인스턴스는 하드웨어 수준의 완전한 격리를 제공한다.
+
+```
+DGX H100 (80GB HBM3)
+├── MIG 1g.10gb × 7 (각 학생 1개 할당)
+│   ├── L2 캐시 독립
+│   ├── 메모리 컨트롤러 분리
+│   └── DRAM 주소 버스 격리
+└── 시간 슬라이싱 없음 → 예측 가능한 지연시간
+```
+
+<Aside type="tip" title="MIG vs 시간 슬라이싱">
+기존 시간 슬라이싱: 학생 A의 OOM 오류가 학생 B의 워크로드에 영향을 줄 수 있음.
+MIG: 하드웨어 수준 격리로 완전한 **QoS(Quality of Service) 보장**.
+</Aside>
+
+### Model Context Protocol (MCP)
+
+MCP는 에이전트와 외부 도구를 연결하는 **표준화된 프로토콜**이다. 에이전트마다 도구를 하드코딩하는 대신, MCP 게이트웨이를 통해 동적으로 도구 접근 권한을 관리한다.
+
+```
+Claude Agent
+    ↓ MCP 요청
+MCP Gateway (권한 관리)
+    ├── File System Server → 파일 읽기/쓰기
+    ├── Git Server → 커밋, 브랜치 관리
+    ├── Test Runner Server → pytest 실행
+    └── Database Server → 쿼리 실행 (QA Agent에만 허용)
+```
+
+### Kubernetes로 MIG 오케스트레이션
+
+```yaml
+# kubernetes/student-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: student-agent-pod
+spec:
+  containers:
+  - name: agent
+    image: pytorch/pytorch:2.5-cuda12-cudnn9-devel
+    resources:
+      limits:
+        nvidia.com/mig-1g.10gb: "1"  # MIG 슬라이스 1개 요청
+    env:
+    - name: ANTHROPIC_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: api-keys
+          key: anthropic-key
+```
+
+## 실습 (Practicum)
+
+### MCP 서버 설정하기
+
+<Steps>
+1. **Claude Desktop 설정 확인**
+
+   ```bash
+   cat ~/.claude/settings.json
+   ```
+
+2. **파일시스템 MCP 서버 추가**
+
+   ```json
+   {
+     "mcpServers": {
+       "filesystem": {
+         "command": "npx",
+         "args": [
+           "-y",
+           "@modelcontextprotocol/server-filesystem",
+           "/path/to/project"
+         ]
+       },
+       "git": {
+         "command": "uvx",
+         "args": ["mcp-server-git", "--repository", "."]
+       }
+     }
+   }
+   ```
+
+3. **MCP 연결 테스트**
+
+   ```bash
+   claude "현재 Git 저장소의 최근 5개 커밋을 보여줘"
+   # MCP Git 서버가 연결되면 실제 커밋 히스토리 반환
+   ```
+
+4. **커스텀 MCP 서버 구현 (선택)**
+
+   ```python
+   # custom_mcp_server.py
+   from mcp.server import Server
+   from mcp.server.stdio import stdio_server
+
+   server = Server("custom-tools")
+
+   @server.tool()
+   async def run_tests(test_path: str) -> str:
+       """pytest를 실행하고 결과를 반환한다"""
+       import subprocess
+       result = subprocess.run(
+           ["python", "-m", "pytest", test_path, "-v"],
+           capture_output=True, text=True
+       )
+       return result.stdout + result.stderr
+
+   if __name__ == "__main__":
+       import asyncio
+       asyncio.run(stdio_server(server))
+   ```
+</Steps>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### Lab 03: MCP 서버 구성
+
+**제출 마감**: 2026-03-25 23:59
+
+**제출 경로**: `assignments/week-03/[학번]/`
+
+**요구사항**:
+1. 파일시스템 + Git MCP 서버 설정 완료 스크린샷
+2. `run_tests` MCP 도구 구현 및 테스트
+3. Claude로 MCP를 통해 Git 커밋 히스토리를 조회하는 대화 로그
+4. 설계한 MCP 아키텍처 다이어그램 (ASCII 또는 이미지)
+
+</div>

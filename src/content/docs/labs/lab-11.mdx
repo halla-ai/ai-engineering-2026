@@ -1,0 +1,319 @@
+---
+title: "Lab 11: 텔레메트리 & 모니터링"
+description: OpenTelemetry 통합, Prometheus+Grafana 설정, 메트릭 수집
+week: 13
+difficulty: 고급
+estimated_time: 6시간
+assignment_due: "2026-05-27"
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+<Badge text="고급" variant="danger" /> <Badge text="마감: 2026-05-27" variant="note" />
+
+## 목표
+
+- OpenTelemetry SDK로 에이전트 파이프라인에 계측(instrumentation) 추가
+- Prometheus 메트릭 엔드포인트 구성 및 Grafana 대시보드 연결
+- 토큰 사용량, 레이턴시, 오류율 등 핵심 메트릭 수집
+
+## 모니터링 아키텍처
+
+```
+에이전트 코드
+    │  OpenTelemetry SDK
+    ▼
+OTel Collector ──traces──▶ Jaeger (분산 추적)
+    │
+    ├──metrics──▶ Prometheus ──▶ Grafana (대시보드)
+    │
+    └──logs────▶ Loki       ──▶ Grafana (로그)
+```
+
+## 구현 요구사항
+
+### 1. Docker Compose 인프라 설정
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+
+volumes:
+  prometheus_data:
+  grafana_data:
+```
+
+```yaml
+# prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'ai-agent'
+    static_configs:
+      - targets: ['host.docker.internal:8001']
+    metrics_path: '/metrics'
+```
+
+### 2. `telemetry.py` — OpenTelemetry 설정
+
+```python
+# telemetry.py
+from opentelemetry import trace, metrics
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.prometheus import PrometheusMetricReader
+from prometheus_client import start_http_server
+
+def setup_telemetry(
+    service_name: str = "ai-agent",
+    otlp_endpoint: str = "http://localhost:4318",
+    metrics_port: int = 8001,
+):
+    """OpenTelemetry 트레이싱 및 메트릭스를 초기화한다."""
+
+    # 트레이싱 설정
+    tracer_provider = TracerProvider()
+    otlp_exporter = OTLPSpanExporter(endpoint=f"{otlp_endpoint}/v1/traces")
+    tracer_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+    trace.set_tracer_provider(tracer_provider)
+
+    # 메트릭스 설정 (Prometheus scrape 엔드포인트)
+    prometheus_reader = PrometheusMetricReader()
+    meter_provider = MeterProvider(metric_readers=[prometheus_reader])
+    metrics.set_meter_provider(meter_provider)
+
+    # Prometheus HTTP 서버 시작
+    start_http_server(port=metrics_port)
+    print(f"[Telemetry] Prometheus 메트릭스: http://localhost:{metrics_port}/metrics")
+
+    return (
+        trace.get_tracer(service_name),
+        metrics.get_meter(service_name)
+    )
+```
+
+### 3. `instrumented_agent.py` — 계측된 에이전트
+
+```python
+# instrumented_agent.py
+import anthropic
+import time
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
+from opentelemetry import metrics
+from telemetry import setup_telemetry
+
+tracer, meter = setup_telemetry(service_name="lab11-agent")
+
+# 메트릭 정의
+token_counter = meter.create_counter(
+    "agent.tokens.total",
+    description="총 토큰 사용량",
+    unit="tokens"
+)
+request_duration = meter.create_histogram(
+    "agent.request.duration",
+    description="API 요청 소요 시간",
+    unit="ms"
+)
+error_counter = meter.create_counter(
+    "agent.errors.total",
+    description="API 오류 횟수"
+)
+iteration_counter = meter.create_counter(
+    "agent.iterations.total",
+    description="Ralph 루프 이터레이션 횟수"
+)
+
+
+class InstrumentedAgent:
+    def __init__(self):
+        self.client = anthropic.Anthropic()
+        self.messages: list[dict] = []
+
+    def call(self, prompt: str, iteration: int = 1) -> str:
+        with tracer.start_as_current_span("agent.call") as span:
+            span.set_attribute("iteration", iteration)
+            span.set_attribute("prompt_length", len(prompt))
+
+            start_ms = time.perf_counter() * 1000
+
+            try:
+                self.messages.append({"role": "user", "content": prompt})
+                response = self.client.messages.create(
+                    model="claude-sonnet-4-6",
+                    max_tokens=2048,
+                    messages=self.messages
+                )
+
+                elapsed_ms = time.perf_counter() * 1000 - start_ms
+                text = response.content[0].text
+                self.messages.append({"role": "assistant", "content": text})
+
+                # 메트릭 기록
+                labels = {"model": "claude-sonnet-4-6", "iteration": str(iteration)}
+                token_counter.add(
+                    response.usage.input_tokens + response.usage.output_tokens,
+                    labels
+                )
+                request_duration.record(elapsed_ms, labels)
+                iteration_counter.add(1, labels)
+
+                # 트레이스 속성 추가
+                span.set_attribute("input_tokens", response.usage.input_tokens)
+                span.set_attribute("output_tokens", response.usage.output_tokens)
+                span.set_attribute("duration_ms", elapsed_ms)
+                span.set_status(Status(StatusCode.OK))
+
+                return text
+
+            except Exception as e:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                error_counter.add(1, {"error_type": type(e).__name__})
+                raise
+```
+
+### 4. Grafana 대시보드 프로비저닝
+
+```json
+// grafana/provisioning/dashboards/agent-dashboard.json
+{
+  "title": "AI Agent 모니터링",
+  "panels": [
+    {
+      "title": "시간당 토큰 사용량",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "rate(agent_tokens_total[5m])",
+          "legendFormat": "{{model}}"
+        }
+      ]
+    },
+    {
+      "title": "API 요청 레이턴시 (P95)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(agent_request_duration_bucket[5m]))",
+          "legendFormat": "P95 레이턴시 (ms)"
+        }
+      ]
+    },
+    {
+      "title": "오류율",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "rate(agent_errors_total[5m])",
+          "legendFormat": "{{error_type}}"
+        }
+      ]
+    },
+    {
+      "title": "이터레이션 횟수",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(agent_iterations_total)"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 5. 부하 생성 스크립트
+
+```python
+# load_generator.py
+import asyncio
+import random
+from instrumented_agent import InstrumentedAgent
+
+PROMPTS = [
+    "Python으로 피보나치 수열을 출력하는 함수를 작성해줘.",
+    "리스트에서 중복을 제거하는 가장 효율적인 방법은?",
+    "딕셔너리를 값(value)으로 정렬하는 방법을 설명해줘.",
+    "파일을 읽고 줄 수를 세는 Python 코드를 작성해줘.",
+    "예외 처리(try/except)의 모범 사례를 설명해줘.",
+]
+
+async def run_load(n_requests: int = 20):
+    agent = InstrumentedAgent()
+    for i in range(n_requests):
+        prompt = random.choice(PROMPTS)
+        try:
+            response = agent.call(prompt, iteration=i + 1)
+            print(f"[{i+1}/{n_requests}] OK ({len(response)} chars)")
+        except Exception as e:
+            print(f"[{i+1}/{n_requests}] ERROR: {e}")
+        await asyncio.sleep(0.5)
+
+if __name__ == "__main__":
+    asyncio.run(run_load(20))
+```
+
+<Steps>
+1. `docker-compose up -d`로 Prometheus, Grafana, Jaeger 시작
+2. `pip install opentelemetry-sdk opentelemetry-exporter-otlp opentelemetry-exporter-prometheus prometheus-client` 설치
+3. `python instrumented_agent.py` 실행 후 `http://localhost:8001/metrics` 확인
+4. `python load_generator.py`로 부하 생성
+5. Grafana (`http://localhost:3000`, admin/admin)에서 대시보드 확인
+6. Jaeger (`http://localhost:16686`)에서 분산 추적 확인
+</Steps>
+
+## 제출물
+
+`assignments/lab-11/[학번]/`에 PR:
+
+- [ ] `docker-compose.yml` — 모니터링 인프라
+- [ ] `prometheus.yml` — 스크레이핑 설정
+- [ ] `telemetry.py` — OTel 초기화
+- [ ] `instrumented_agent.py` — 4개 메트릭 계측된 에이전트
+- [ ] `load_generator.py` — 부하 생성 스크립트
+- [ ] `screenshots/grafana_dashboard.png` — Grafana 대시보드 캡처
+- [ ] `screenshots/jaeger_trace.png` — Jaeger 트레이스 캡처
+- [ ] `README.md` — 메트릭 해석, 발견한 성능 이슈, 개선 제안
+
+<Aside type="tip" title="알림 설정">
+Grafana의 Alert 기능으로 P99 레이턴시 > 5초 또는 오류율 > 5% 시 이메일/슬랙 알림을 설정하면 가산점을 받을 수 있다.
+</Aside>

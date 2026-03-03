@@ -1,0 +1,91 @@
+---
+title: "14주차: Ralphthon 실행"
+description: 하네스 구현, 에이전트 연동, 반복 개선 — 실전 Ralphthon
+week: 14
+phase: 5
+phase_title: 캡스톤 Ralphthon
+date: "2026-06-03"
+theory_topics:
+  - 실전 하네스 엔지니어링 체크포인트
+  - 팀 단위 에이전트 시스템 통합
+  - 중간 점검 및 피벗 결정
+lab_topics:
+  - 팀별 Ralphthon 실행
+  - 실시간 멘토링
+assignment: "캡스톤: 중간 진행 보고"
+assignment_due: "2026-06-10"
+difficulty: 고급
+estimated_time: 20시간 (팀 집중 개발)
+---
+
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 5</span>
+  <Badge text="14주차" variant="note" />
+  <Badge text="Ralphthon" variant="success" />
+</div>
+
+## Ralphthon 실행 주간
+
+이번 주는 강의보다 **팀 개발**에 집중한다. 교수는 팀별 순회 멘토링을 제공한다.
+
+<Aside type="tip" title="Ralphthon 성공의 법칙">
+완벽한 시스템을 목표로 하지 말라. **작동하는 MVP를 먼저 만들고, 반복 개선**하라. Ralph 루프 철학 그 자체다.
+</Aside>
+
+## 구현 체크포인트
+
+<Steps>
+1. **Day 1: 기반 구조 (월요일)**
+   - 저장소 구조 확정
+   - PROMPT.md v1 작성
+   - 하네스 스크립트 기본 구현
+   - 첫 번째 에이전트 루프 실행 성공
+
+2. **Day 2-3: 핵심 기능 (화-수)**
+   - 에이전트 파이프라인 연동
+   - 자동 테스트 스위트 구축
+   - Backpressure 메커니즘 검증
+
+3. **Day 4: 통합 및 안정화 (목)**
+   - 전체 파이프라인 end-to-end 실행
+   - 엣지 케이스 처리
+   - 인스트럭션 튜닝으로 반복 오류 교정
+
+4. **Day 5: 문서화 및 발표 준비 (금)**
+   - README 작성
+   - 데모 스크립트 준비
+   - 중간 보고서 제출
+</Steps>
+
+## 자주 발생하는 문제와 해결책
+
+| 문제 | 원인 | 해결 |
+|------|------|------|
+| 에이전트 무한 루프 | 탈출 조건 미설정 | 최대 반복 횟수 hard limit 추가 |
+| 컨텍스트 오염 | Context Rot 진행 | 즉시 wipe + 상태 파일 복구 |
+| 에이전트 간 충돌 | 동시 파일 수정 | 파일 잠금(Lock) 메커니즘 |
+| 비용 폭발 | 무한 API 호출 | 토큰 예산 설정 |
+
+## 멘토링 예약
+
+교수 멘토링은 Slack `#capstone-help`에서 신청. 팀당 30분씩 배정.
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### 캡스톤: 중간 진행 보고
+
+**제출 마감**: 2026-06-10 23:59
+
+**제출 방법**: `capstone/teams/[팀명]/progress-week14.md`
+
+**내용**:
+1. 완료된 기능 목록
+2. 미완성 기능 및 해결 계획
+3. 가장 크게 배운 점 (기술적 도전)
+4. 최종 발표 데모 계획
+
+</div>

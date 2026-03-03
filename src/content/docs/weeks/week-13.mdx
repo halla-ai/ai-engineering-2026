@@ -1,0 +1,91 @@
+---
+title: "13주차: 캡스톤 프로젝트 설계"
+description: Ralphthon 준비 — 팀 구성, 주제 선정, 시스템 아키텍처 설계
+week: 13
+phase: 5
+phase_title: 캡스톤 Ralphthon
+date: "2026-05-27"
+theory_topics:
+  - Ralphthon 개요와 평가 기준
+  - 시스템 아키텍처 설계 방법론
+  - 팀 협업 프로토콜
+lab_topics:
+  - 팀 구성 및 역할 분담
+  - 아키텍처 설계 문서 작성
+assignment: "캡스톤: 아키텍처 설계 문서"
+assignment_due: "2026-06-03"
+difficulty: 고급
+estimated_time: 10시간
+---
+
+import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 5</span>
+  <Badge text="13주차" variant="note" />
+  <Badge text="고급" variant="danger" />
+</div>
+
+## Ralphthon이란?
+
+**Ralphthon**은 이 강의의 캡스톤 프로젝트다. Ralph 루프 방법론을 기반으로 **실제 소프트웨어 문제를 해결하는 자율 에이전틱 시스템**을 팀으로 설계하고 구현한다.
+
+업계의 해커톤(Hackathon)에서 차용한 이름으로, 2026년 초 Ralph 루프 방법론이 확산되면서 생겨난 **Ralphthon** 문화를 직접 체험하는 기회다.
+
+## 팀 구성
+
+<CardGrid>
+  <Card title="팀 규모" icon="group">
+    3–4인 팀 구성. 역할: 아키텍트 1명, 엔지니어 2명, QA/DevOps 1명
+  </Card>
+  <Card title="주제 선정" icon="document">
+    실제 문제를 해결하는 소프트웨어 프로젝트. 교수 승인 필요.
+  </Card>
+</CardGrid>
+
+## 추천 프로젝트 아이디어
+
+1. **자율 코드 리뷰 시스템** — GitHub PR을 자동으로 리뷰하고 개선 제안
+2. **테스트 자동 생성기** — 기존 코드베이스에서 pytest 테스트 자동 생성
+3. **문서화 자동화** — 코드 변경 시 README와 API 문서 자동 업데이트
+4. **버그 자동 수정기** — GitHub Issue를 읽고 자동으로 버그를 찾아 수정
+5. **성능 최적화 에이전트** — 프로파일링 결과를 분석하고 성능 병목 자동 수정
+
+## 아키텍처 설계 체크리스트
+
+<Steps>
+1. **문제 정의** — 해결하려는 실제 문제와 성공 기준 명확화
+
+2. **에이전트 역할 설계** — 몇 개 에이전트? 각 역할과 책임?
+
+3. **데이터 흐름 설계** — 에이전트 간 아티팩트 형식 정의
+
+4. **하네스 설계** — Backpressure 메커니즘, Garbage Collection 정책
+
+5. **인프라 설계** — 어느 MIG 슬라이스? 어느 모델?
+
+6. **평가 방법** — 시스템 성능을 어떻게 측정할 것인가?
+</Steps>
+
+<Aside type="note" title="설계 문서 요구사항">
+13주차 과제로 제출하는 아키텍처 설계 문서에는 반드시 에이전트 상호작용 다이어그램, 데이터 흐름도, 기술 스택 선택 근거가 포함되어야 한다.
+</Aside>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### 캡스톤: 아키텍처 설계 문서
+
+**제출 마감**: 2026-06-03 23:59
+
+**제출 경로**: `capstone/teams/[팀명]/design.md`
+
+**요구사항**:
+1. 문제 정의 및 해결 접근법
+2. 에이전트 아키텍처 다이어그램
+3. 기술 스택 선택 및 근거
+4. 주차별 구현 계획
+5. 성공 지표 정의
+
+</div>

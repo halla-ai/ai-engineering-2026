@@ -1,0 +1,75 @@
+/* CHU (Cheju Halla University) Brand Colors */
+:root {
+  /* Primary — CHU Blue */
+  --sl-color-accent-low: #dbeafe;
+  --sl-color-accent: #1d4ed8;
+  --sl-color-accent-high: #1e3a8a;
+
+  /* Text */
+  --sl-color-white: #ffffff;
+
+  /* Font */
+  --sl-font: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
+    'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+}
+
+/* Dark mode */
+:root[data-theme='dark'] {
+  --sl-color-accent-low: #1e3a8a;
+  --sl-color-accent: #3b82f6;
+  --sl-color-accent-high: #93c5fd;
+}
+
+/* Badge styling for difficulty levels */
+.badge-입문 { background-color: #d1fae5; color: #065f46; }
+.badge-초급 { background-color: #dbeafe; color: #1e40af; }
+.badge-중급 { background-color: #fef3c7; color: #92400e; }
+.badge-고급 { background-color: #fee2e2; color: #991b1b; }
+
+/* Week header styling */
+.week-meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.week-meta .badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+/* Code block enhancement */
+.expressive-code {
+  margin: 1.5rem 0;
+}
+
+/* Assignment box */
+.assignment-box {
+  border: 2px solid var(--sl-color-accent);
+  border-radius: 0.5rem;
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  background: var(--sl-color-accent-low);
+}
+
+.assignment-box h3 {
+  margin-top: 0;
+  color: var(--sl-color-accent-high);
+}
+
+/* Phase tag */
+.phase-tag {
+  display: inline-block;
+  background: var(--sl-color-accent);
+  color: white;
+  padding: 0.2rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}

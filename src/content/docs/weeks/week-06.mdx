@@ -1,0 +1,117 @@
+---
+title: "6주차: 인스트럭션 튜닝"
+description: 에이전트 행동 교정과 영구 컨텍스트 페이로드 설계 — "Sign" 메타포
+week: 6
+phase: 2
+phase_title: 하네스 엔지니어링
+date: "2026-04-08"
+theory_topics:
+  - 인스트럭션 튜닝 원리
+  - Sign 메타포와 영구 제약 추가
+  - PROMPT.md 고도화 전략
+lab_topics:
+  - PROMPT.md 반복 오류 분석
+  - 인스트럭션 추가 및 효과 측정
+assignment: "Lab 06: 인스트럭션 튜닝 실습"
+assignment_due: "2026-04-15"
+difficulty: 중급
+estimated_time: 4시간
+---
+
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 2</span>
+  <Badge text="6주차" variant="note" />
+  <Badge text="중급" variant="danger" />
+</div>
+
+## 이론 (Theory)
+
+### 인스트럭션 튜닝이란?
+
+Ralph 루프에서 에이전트가 반복적인 실수를 하면, **모델 가중치를 재훈련하지 않고** PROMPT.md에 구체적이고 결정론적인 지시를 추가하여 행동을 교정한다.
+
+<Aside type="note" title='Huntley의 "Sign" 메타포'>
+어린이 놀이터 미끄럼틀 옆에 "올라가지 마시오" 경고판을 세우는 것과 같다. 미끄럼틀 자체(모델)를 재설계하는 대신, 환경에 명확한 지시(Sign)를 추가한다.
+</Aside>
+
+### 인스트럭션 튜닝 프로세스
+
+```
+1. 반복 오류 패턴 식별
+   ↓
+2. 오류의 구체적 원인 분석
+   ↓
+3. 결정론적 제약 문구 작성
+   ↓
+4. PROMPT.md 영구 섹션에 추가
+   ↓
+5. 다음 루프에서 효과 검증
+```
+
+### PROMPT.md 고도화 예시
+
+```markdown
+# [영구 제약 — 절대 무시하지 말 것]
+
+## ⚠️ 알려진 함정 (Instructional Tuning)
+
+### 1. 존재하지 않는 함수 호출 금지
+- `utils.parse_json()`은 이 프로젝트에 없음
+- 반드시 `json.loads()`를 직접 사용할 것
+- 추가일: 2026-04-02 (루프 #47에서 반복 오류 발생)
+
+### 2. 테스트 없이 커밋 금지
+- `git commit` 전 반드시 `pytest tests/ -q` 통과 필수
+- CI가 실패하면 자동 rollback됨
+
+### 3. 타입 힌트 필수
+- 모든 함수는 Python 타입 힌트 포함
+- `def add(a, b):` → `def add(a: int, b: int) -> int:`
+
+---
+
+# [현재 태스크]
+...
+```
+
+### 인스트럭션 효과 측정
+
+| 지표 | 측정 방법 |
+|------|-----------|
+| 반복 오류율 | 동일 오류 발생 횟수 / 전체 루프 수 |
+| 평균 루프 횟수 | 태스크 완료까지 필요한 루프 수 |
+| 컨텍스트 효율 | 불필요한 탐색에 낭비되는 토큰 비율 |
+
+## 실습 (Practicum)
+
+<Steps>
+1. **오류 패턴 분석 스크립트**
+
+   이전 랩의 실행 로그를 분석하여 반복 오류 상위 5개를 추출한다.
+
+2. **인스트럭션 작성 및 추가**
+
+   각 반복 오류에 대해 결정론적 제약 문구를 작성하고 PROMPT.md에 추가한다.
+
+3. **A/B 테스트**
+
+   동일한 태스크를 인스트럭션 추가 전/후로 실행하여 루프 횟수와 토큰 사용량을 비교한다.
+</Steps>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### Lab 06: 인스트럭션 튜닝 실습
+
+**제출 마감**: 2026-04-15 23:59
+
+**요구사항**:
+1. 반복 오류 분석 보고서 (최소 3가지 패턴)
+2. 고도화된 `PROMPT.md` (인스트럭션 섹션 포함)
+3. 튜닝 전/후 비교 실험 결과
+4. 인스트럭션 효과 정량 측정 그래프
+
+</div>

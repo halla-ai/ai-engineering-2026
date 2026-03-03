@@ -1,0 +1,80 @@
+---
+title: AI 엔지니어링 2026
+description: 제주한라대학교 인공지능학과 4학년 — 에이전틱 워크플로우와 하네스 엔지니어링
+template: splash
+hero:
+  tagline: 에이전틱 워크플로우와 하네스 엔지니어링 — 자율 AI 시스템을 설계하고 운영하는 차세대 소프트웨어 엔지니어를 양성합니다.
+  image:
+    file: ../../assets/logo.svg
+  actions:
+    - text: 강의계획서 보기
+      link: /syllabus
+      icon: right-arrow
+      variant: primary
+    - text: 1주차 시작하기
+      link: /weeks/week-01
+      icon: rocket
+      variant: secondary
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 이 강의에서 배우는 것
+
+<CardGrid stagger>
+  <Card title="에이전틱 시스템 설계" icon="puzzle">
+    Human-on-the-Loop(HOTL) 거버넌스 아키텍처와 Governance-as-Code를 구현합니다.
+  </Card>
+  <Card title="하네스 엔지니어링" icon="setting">
+    Ralph 루프 방법론으로 비결정적 AI 에이전트를 결정론적 시스템으로 제어합니다.
+  </Card>
+  <Card title="멀티에이전트 SDLC" icon="approve-check-circle">
+    플래너·코더·QA 에이전트가 협력하는 자율 소프트웨어 개발 파이프라인을 구축합니다.
+  </Card>
+  <Card title="오픈소스 ML 인프라" icon="laptop">
+    DGX H100 + MIG + vLLM으로 DeepSeek-Coder-V2를 직접 배포하고 운영합니다.
+  </Card>
+</CardGrid>
+
+## 강의 구성
+
+| Phase | 주차 | 주제 |
+|-------|------|------|
+| **1** | 1–3주 | 에이전틱 시스템 기초, HOTL, MIG, MCP |
+| **2** | 4–6주 | 하네스 엔지니어링, Ralph 루프, 인스트럭션 튜닝 |
+| **3** | 7–9주 | 멀티에이전트 SDLC, 플래닝/QA 에이전트 |
+| **4** | 10–12주 | DeepSeek-Coder-V2, vLLM, 텔레메트리, LLM-as-Judge |
+| **5** | 13–16주 | 캡스톤 "Ralphthon" 설계·실행·발표 |
+
+## 바로 시작하기
+
+<LinkCard
+  title="강의계획서"
+  description="수업 목표, 평가 기준, 주차별 계획을 확인합니다."
+  href="/syllabus"
+/>
+<LinkCard
+  title="1주차: 코스 오리엔테이션"
+  description="AI 엔지니어링 패러다임 전환과 HOTL 아키텍처를 소개합니다."
+  href="/weeks/week-01"
+/>
+<LinkCard
+  title="실습 환경 설정 (Lab 01)"
+  description="개발 환경, DGX 서버 접속, Claude Code 설치를 완료합니다."
+  href="/labs/lab-01"
+/>
+
+## 기여 방법
+
+이 사이트의 모든 내용은 GitHub에서 관리됩니다. 오류를 발견하거나 더 나은 설명을 알고 있다면 **Pull Request**를 보내주세요.
+학생 여러분의 기여가 강의를 더 좋게 만듭니다.
+
+<LinkCard
+  title="기여 가이드"
+  description="Fork → 수정 → PR 보내는 방법을 단계별로 설명합니다."
+  href="/contribute"
+/>
+
+---
+
+> **강의 정보** — 제주한라대학교 인공지능학과 | 2026년 1학기 | 담당교수: 이영준

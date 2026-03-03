@@ -1,0 +1,232 @@
+---
+title: "Lab 12: LLM-as-Judge 구현"
+description: LLMJudge 클래스 구현, 10개 코드 샘플 평가, 인간 평가자 상관관계 분석
+week: 12
+difficulty: 고급
+estimated_time: 6시간
+assignment_due: "2026-05-27"
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+<Badge text="고급" variant="danger" /> <Badge text="마감: 2026-05-27" variant="note" />
+
+## 목표
+
+- `LLMJudge` 클래스 완전 구현 — 5가지 기준으로 코드 자동 평가
+- 10개 코드 샘플에 대한 자동 평가 결과 생성
+- 인간 평가자 결과와 LLM Judge 결과의 피어슨 상관관계 측정
+
+## LLM-as-Judge 개요
+
+에이전틱 시스템에서 자동 테스트(pytest)는 논리적 정확성을 검증하지만, **코드 가독성, 유지보수성, 설계 패턴** 같은 품질 지표는 자동화하기 어렵다. LLM-as-Judge는 Claude를 평가자로 사용하여 이 간극을 메운다.
+
+```
+코드 + 요구사항
+      ↓
+LLM Judge (Claude)
+      ↓
+점수 (1-10) + 강점/개선점
+      ↓
+QA 파이프라인 통합
+```
+
+## 구현 요구사항
+
+### 1. `llm_judge.py` — LLM 평가 시스템
+
+```python
+# llm_judge.py
+import json
+import re
+import anthropic
+from dataclasses import dataclass
+
+JUDGE_SYSTEM = """당신은 10년 경력의 시니어 소프트웨어 엔지니어입니다.
+제시된 코드를 아래 5가지 기준으로 각각 1-10점 평가하세요.
+
+1. 정확성 (Correctness): 요구사항을 올바르게 구현했는가?
+2. 가독성 (Readability): 코드가 명확하고 읽기 쉬운가?
+3. 효율성 (Efficiency): 불필요한 연산이나 중복이 없는가?
+4. 견고성 (Robustness): 엣지 케이스와 예외를 처리하는가?
+5. 유지보수성 (Maintainability): 향후 수정과 확장이 쉬운가?
+
+반드시 JSON 형식으로만 응답하세요."""
+
+
+@dataclass
+class JudgeScore:
+    correctness: float
+    readability: float
+    efficiency: float
+    robustness: float
+    maintainability: float
+    overall: float
+    strengths: list[str]
+    improvements: list[str]
+    reasoning: str
+
+    def to_dict(self) -> dict:
+        return {
+            "scores": {
+                "correctness": self.correctness,
+                "readability": self.readability,
+                "efficiency": self.efficiency,
+                "robustness": self.robustness,
+                "maintainability": self.maintainability,
+            },
+            "overall": self.overall,
+            "strengths": self.strengths,
+            "improvements": self.improvements,
+            "reasoning": self.reasoning,
+        }
+
+
+class LLMJudge:
+    def __init__(self, model: str = "claude-sonnet-4-6"):
+        self.client = anthropic.Anthropic()
+        self.model = model
+        self.evaluation_history: list[dict] = []
+
+    def evaluate(self, code: str, requirement: str, sample_id: str = "") -> JudgeScore:
+        user_msg = f"요구사항:\n{requirement}\n\n코드:\n```\n{code}\n```"
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=1024,
+            system=JUDGE_SYSTEM,
+            messages=[{"role": "user", "content": user_msg}]
+        )
+
+        text = response.content[0].text
+        match = re.search(r"\{[\s\S]+\}", text)
+        if not match:
+            raise ValueError(f"JSON 파싱 실패: {text[:200]}")
+
+        data = json.loads(match.group())
+        scores = data.get("scores", {})
+
+        result = JudgeScore(
+            correctness=scores.get("correctness", 5),
+            readability=scores.get("readability", 5),
+            efficiency=scores.get("efficiency", 5),
+            robustness=scores.get("robustness", 5),
+            maintainability=scores.get("maintainability", 5),
+            overall=data.get("overall", 5.0),
+            strengths=data.get("strengths", []),
+            improvements=data.get("improvements", []),
+            reasoning=data.get("reasoning", ""),
+        )
+
+        self.evaluation_history.append({
+            "sample_id": sample_id,
+            "requirement": requirement[:100],
+            "code_length": len(code),
+            "score": result.to_dict(),
+        })
+        return result
+
+    def batch_evaluate(self, samples: list[dict]) -> list[JudgeScore]:
+        results = []
+        for i, s in enumerate(samples):
+            print(f"[LLMJudge] 평가 중 {i+1}/{len(samples)}: {s.get('id', '')}")
+            score = self.evaluate(
+                code=s["code"],
+                requirement=s["requirement"],
+                sample_id=s.get("id", str(i))
+            )
+            results.append(score)
+        return results
+
+    def save_results(self, path: str = "judge_results.json"):
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self.evaluation_history, f, ensure_ascii=False, indent=2)
+        print(f"[LLMJudge] 결과 저장: {path}")
+```
+
+### 2. `samples.py` — 평가용 코드 10개
+
+품질이 다양한 10개 코드 샘플을 `SAMPLES: list[dict]`로 정의한다.
+
+각 샘플은 다음 구조:
+```python
+{
+    "id": "sample-01-good",
+    "requirement": "정수 리스트에서 최솟값과 최댓값을 반환한다.",
+    "code": "def min_max(nums: list[int]) -> tuple[int, int]: ..."
+}
+```
+
+좋은 코드(`-good`), 보통 코드(`-medium`), 나쁜 코드(`-poor`)를 각각 3~4개씩 포함한다.
+
+### 3. `correlation_analysis.py` — 상관관계 분석
+
+```python
+# correlation_analysis.py
+import json
+import statistics
+from pathlib import Path
+
+def pearson_correlation(x: list[float], y: list[float]) -> float:
+    n = len(x)
+    if n < 2:
+        return 0.0
+    mx, my = statistics.mean(x), statistics.mean(y)
+    num = sum((xi - mx) * (yi - my) for xi, yi in zip(x, y))
+    dx = sum((xi - mx) ** 2 for xi in x) ** 0.5
+    dy = sum((yi - my) ** 2 for yi in y) ** 0.5
+    return num / (dx * dy) if dx and dy else 0.0
+
+# 인간 평가자 점수 (직접 채점)
+HUMAN_SCORES = {
+    "sample-01-good":   9.0,
+    "sample-02-poor":   4.0,
+    "sample-03-good":   8.5,
+    # ... 10개 전부 채점
+}
+
+def analyze(results_path: str = "judge_results.json"):
+    data = json.loads(Path(results_path).read_text())
+    llm   = [d["score"]["overall"] for d in data]
+    human = [HUMAN_SCORES.get(d["sample_id"], 5.0) for d in data]
+    r = pearson_correlation(llm, human)
+    print(f"피어슨 상관계수: {r:.3f}")
+    return r
+```
+
+## 실습 순서
+
+<Steps>
+1. `samples.py` — 10개 코드 샘플 정의 (좋음/보통/나쁨 비율 균형)
+
+2. `llm_judge.py` — `LLMJudge` 구현 및 단독 테스트
+
+3. 배치 평가 실행:
+   ```bash
+   python -c "
+   from llm_judge import LLMJudge
+   from samples import SAMPLES
+   j = LLMJudge()
+   j.batch_evaluate(SAMPLES)
+   j.save_results('judge_results.json')
+   "
+   ```
+
+4. 10개 샘플을 직접 채점하여 `HUMAN_SCORES` 딕셔너리 완성
+
+5. `python correlation_analysis.py`로 상관계수 계산 및 해석
+</Steps>
+
+## 제출물
+
+`assignments/lab-12/[학번]/`에 PR:
+
+- [ ] `llm_judge.py` — 5기준 평가 클래스
+- [ ] `samples.py` — 10개 코드 샘플 (good/medium/poor 균형)
+- [ ] `judge_results.json` — 실제 LLM 평가 결과
+- [ ] `correlation_analysis.py` — 상관관계 분석 스크립트
+- [ ] `README.md` — 상관계수 결과, LLM Judge의 편향 분석, 개선 방향
+
+<Aside type="note" title="평가 포인트">
+상관계수 수치보다 **왜 LLM Judge가 인간 평가자와 다른 점수를 주었는지** 분석하는 것이 더 중요하다.
+LLM Judge의 편향(예: 긴 코드 선호, 주석이 많은 코드에 높은 점수)을 발견하면 보고서에 기술하라.
+</Aside>

@@ -1,0 +1,107 @@
+---
+title: "Lab 01: 개발 환경 설정"
+description: Claude Code CLI 설치, DGX 서버 접속, GitHub 설정 완료
+week: 1
+difficulty: 입문
+estimated_time: 3시간
+assignment_due: "2026-03-11"
+---
+
+import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
+
+<Badge text="입문" variant="success" /> <Badge text="마감: 2026-03-11" variant="note" />
+
+## 목표
+
+- Claude Code CLI 설치 및 API 키 설정 완료
+- DGX H100 서버 SSH 접속 성공
+- GitHub 저장소 Fork 및 PR 워크플로우 이해
+
+## 사전 요구사항
+
+- GitHub 계정
+- 터미널(macOS/Linux) 또는 WSL(Windows) 사용 가능
+
+## 실습 단계
+
+<Steps>
+1. **Node.js 설치 확인**
+
+   ```bash
+   node --version  # v20.x.x 이상
+   npm --version   # 10.x.x 이상
+   ```
+
+   Node.js가 없다면 [nodejs.org](https://nodejs.org)에서 설치.
+
+2. **Claude Code 설치**
+
+   ```bash
+   npm install -g @anthropic-ai/claude-code
+   claude --version
+   ```
+
+3. **Anthropic API 키 설정**
+
+   [console.anthropic.com](https://console.anthropic.com)에서 API 키 발급 후:
+
+   ```bash
+   # ~/.bashrc 또는 ~/.zshrc에 추가
+   export ANTHROPIC_API_KEY="sk-ant-..."
+
+   # 적용
+   source ~/.bashrc
+   ```
+
+4. **Claude Code 첫 실행**
+
+   ```bash
+   mkdir ~/hello-agent && cd ~/hello-agent
+   claude "Python으로 'Hello, AI Engineering 2026!' 출력하는 파일을 만들어줘."
+   python hello.py
+   ```
+
+5. **DGX 서버 접속**
+
+   <Tabs>
+     <TabItem label="SSH">
+       ```bash
+       ssh [학번]@dgx.chu.ac.kr
+       # 초기 비밀번호: 학번
+       passwd  # 즉시 변경 필수!
+       ```
+     </TabItem>
+     <TabItem label="SSH Config">
+       ```
+       # ~/.ssh/config
+       Host dgx
+         HostName dgx.chu.ac.kr
+         User [학번]
+         IdentityFile ~/.ssh/id_ed25519
+       ```
+     </TabItem>
+   </Tabs>
+
+6. **저장소 Fork 및 클론**
+
+   ```bash
+   # GitHub에서 Fork 후
+   git clone https://github.com/[YOUR_USERNAME]/ai-engineering-2026.git
+   cd ai-engineering-2026
+   npm install
+   npm run dev  # 로컬 사이트 확인
+   ```
+</Steps>
+
+## 제출물
+
+`assignments/lab-01/[학번]/` 폴더에 다음 파일을 포함한 PR:
+
+- [ ] `README.md` — 설치 과정 및 트러블슈팅 기록
+- [ ] `hello.py` — Claude Code로 생성된 Python 파일
+- [ ] `screenshots/` — 설치 완료 및 DGX 접속 스크린샷 (2장 이상)
+
+<Aside type="tip" title="트러블슈팅">
+- API 키 오류: 환경변수가 제대로 설정됐는지 `echo $ANTHROPIC_API_KEY`로 확인
+- DGX 접속 실패: VPN 연결 필요 (학교 외부 접속 시)
+</Aside>

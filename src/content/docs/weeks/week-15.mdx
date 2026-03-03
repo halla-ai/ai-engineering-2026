@@ -1,0 +1,77 @@
+---
+title: "15주차: 시스템 통합과 최종 테스트"
+description: 캡스톤 프로젝트 통합 완성 — 자동 테스트, 성능 측정, 발표 준비
+week: 15
+phase: 5
+phase_title: 캡스톤 Ralphthon
+date: "2026-06-10"
+theory_topics:
+  - 시스템 통합 테스트 전략
+  - 성능 측정 및 보고서 작성
+  - 발표 자료 구성법
+lab_topics:
+  - End-to-end 통합 테스트
+  - 발표 리허설
+assignment: "캡스톤: 최종 발표 자료"
+assignment_due: "2026-06-17"
+difficulty: 고급
+estimated_time: 15시간
+---
+
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 5</span>
+  <Badge text="15주차" variant="note" />
+  <Badge text="마무리" variant="success" />
+</div>
+
+## 통합 테스트 체크리스트
+
+<Steps>
+1. **기능 테스트** — 각 에이전트 개별 기능 100% 통과
+
+2. **통합 테스트** — 전체 파이프라인 end-to-end 실행 3회 이상 성공
+
+3. **스트레스 테스트** — 연속 10개 태스크 처리 시 안정성 확인
+
+4. **실패 복구 테스트** — 의도적 실패 주입 후 자동 복구 확인
+
+5. **성능 측정** — 처리 시간, 토큰 사용량, 성공률 기록
+</Steps>
+
+## 발표 자료 구성
+
+**권장 발표 구조 (15분)**:
+
+1. **문제 정의** (2분) — 어떤 문제를 해결하려 했나?
+2. **아키텍처** (3분) — 어떻게 설계했나? 다이어그램 필수
+3. **라이브 데모** (5분) — 실제 에이전트 실행 (사전 녹화 권장)
+4. **결과 및 성과** (3분) — 성능 수치, 인상적인 결과
+5. **배운 점** (2분) — 가장 어려웠던 점, 다시 한다면?
+
+<Aside type="tip" title="데모 준비">
+라이브 데모는 네트워크 문제, API 오류 등 예측 불가한 실패가 발생할 수 있다. 반드시 **사전 녹화본을 백업**으로 준비하라.
+</Aside>
+
+## 최종 제출물 목록
+
+| 항목 | 위치 | 마감 |
+|------|------|------|
+| 소스 코드 | `capstone/teams/[팀명]/src/` | 6/17 |
+| README | `capstone/teams/[팀명]/README.md` | 6/17 |
+| 발표 자료 | `capstone/teams/[팀명]/presentation.pdf` | 6/17 |
+| 최종 보고서 | `capstone/teams/[팀명]/report.md` | 6/17 |
+| 데모 영상 | `capstone/teams/[팀명]/demo.mp4` | 6/17 |
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### 캡스톤: 최종 발표 자료
+
+**제출 마감**: 2026-06-17 23:59
+
+**요구사항**: 위 제출물 목록 전체 완성
+
+</div>

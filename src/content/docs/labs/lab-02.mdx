@@ -1,0 +1,85 @@
+---
+title: "Lab 02: 첫 번째 Claude Code 에이전트"
+description: HOTL 거버넌스가 적용된 에이전트 구현 — 감사 로그와 Hard Interrupt
+week: 2
+difficulty: 초급
+estimated_time: 4시간
+assignment_due: "2026-03-18"
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+<Badge text="초급" variant="caution" /> <Badge text="마감: 2026-03-18" variant="note" />
+
+## 목표
+
+- `anthropic` Python SDK를 사용한 첫 번째 에이전트 구현
+- HOTL 거버넌스 레이어 (ActionRisk, Hard Interrupt) 구현
+- 감사 로그 시스템 구축
+
+## 환경 설정
+
+```bash
+mkdir lab-02 && cd lab-02
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install anthropic python-dotenv
+```
+
+## 구현 요구사항
+
+### 1. `governance.py` — 거버넌스 레이어
+
+```python
+from enum import Enum
+import logging
+from datetime import datetime
+
+logging.basicConfig(
+    filename='audit.log',
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)s | %(message)s'
+)
+
+class ActionRisk(Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+def log_action(action: str, risk: ActionRisk, approved: bool):
+    logging.info(f"ACTION={action[:50]} | RISK={risk.value} | APPROVED={approved}")
+
+def require_human_approval(action: str) -> bool:
+    print(f"\n⚠️  HIGH RISK ACTION 감지:\n{action}\n")
+    response = input("승인하시겠습니까? (yes/no): ")
+    return response.lower() == "yes"
+
+def governance_check(action: str, risk: ActionRisk) -> bool:
+    if risk == ActionRisk.HIGH:
+        approved = require_human_approval(action)
+        log_action(action, risk, approved)
+        return approved
+    log_action(action, risk, True)
+    return True
+```
+
+### 2. `agent.py` — 에이전트 메인 루프
+
+거버넌스 레이어를 통합한 Claude API 호출 에이전트를 구현한다.
+
+## 제출물
+
+`assignments/lab-02/[학번]/`에 PR:
+
+- [ ] `governance.py`
+- [ ] `agent.py`
+- [ ] `audit.log` 예시 (최소 5개 액션 기록)
+- [ ] `README.md` — 설계 결정 및 테스트 결과
+
+<Steps>
+1. 코드 구현
+2. `python agent.py`로 실행 테스트
+3. HIGH risk 액션 실행 시 Hard Interrupt 동작 확인
+4. `audit.log` 생성 확인
+5. PR 제출
+</Steps>

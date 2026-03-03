@@ -1,0 +1,127 @@
+---
+title: "7주차: 멀티에이전트 SDLC 설계"
+description: 전통적 소프트웨어 개발 생애주기와 에이전틱 SDLC 비교 — 역할 분담 아키텍처
+week: 7
+phase: 3
+phase_title: 멀티에이전트 SDLC
+date: "2026-04-15"
+theory_topics:
+  - 전통적 SDLC vs 에이전틱 SDLC
+  - 에이전트 역할 분담 설계
+  - MCP를 통한 도구 접근 권한 관리
+lab_topics:
+  - 멀티에이전트 파이프라인 설계
+  - 에이전트 간 아티팩트 전달
+assignment: "Lab 07: 멀티에이전트 파이프라인 설계"
+assignment_due: "2026-04-22"
+difficulty: 고급
+estimated_time: 7시간
+---
+
+import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 3</span>
+  <Badge text="7주차" variant="note" />
+  <Badge text="고급" variant="danger" />
+</div>
+
+## 이론 (Theory)
+
+### 전통적 SDLC → 에이전틱 SDLC
+
+| 전통적 역할 | 에이전틱 대응 | 도구 접근 (MCP) |
+|-------------|---------------|-----------------|
+| Product Manager | 플래너 에이전트 | 웹 검색, 문서 읽기 |
+| Software Architect | 초기화 에이전트 | 저장소 매핑, Git 브랜치 |
+| Developer | 코더 에이전트 (Ralph Loop) | 파일 수정, 컴파일러 |
+| QA Engineer | QA 에이전트 | pytest, diff viewer |
+| DevOps | 배포 에이전트 | Docker, Kubernetes |
+
+### 멀티에이전트 파이프라인 아키텍처
+
+```
+Human (HIC) → 요구사항 입력
+      ↓
+[Planner Agent]
+  • 요구사항 파싱
+  • spec.md 생성
+  • 우선순위 결정
+      ↓ spec.md 전달
+[Initializer Agent]
+  • 코드베이스 분석
+  • 서브태스크 분해
+  • init.sh 생성
+      ↓ task_queue.json 전달
+[Coder Agent × N]  (Ralph Loop)
+  • 병렬 태스크 실행
+  • 로컬 테스트 통과 필수
+      ↓ PR 생성
+[QA Agent]
+  • 독립 코드 리뷰
+  • 통합 테스트 실행
+  • 회귀 검증
+      ↓ 승인/거부
+[Deploy Agent]
+  • 스테이징 배포
+  • E2E 테스트
+  • Human 최종 승인 (Hard Interrupt)
+      ↓
+프로덕션 배포
+```
+
+<Aside type="caution" title="에이전트 간 통신의 황금 규칙">
+에이전트 간 통신은 반드시 **구조화된 아티팩트(Markdown, JSON)**를 통해 이루어져야 한다.
+에이전트 A가 에이전트 B에게 직접 메시지를 보내는 방식은 비결정성을 극대화한다.
+</Aside>
+
+### 아티팩트 기반 핸드오프 설계
+
+```json
+// task_queue.json — Initializer → Coder 핸드오프
+{
+  "project": "calculator-app",
+  "tasks": [
+    {
+      "id": "task-001",
+      "description": "add() 함수 구현",
+      "target_file": "calculator.py",
+      "test_file": "tests/test_calculator.py",
+      "acceptance_criteria": ["모든 pytest 통과", "타입 힌트 포함"],
+      "status": "pending"
+    }
+  ]
+}
+```
+
+## 실습 (Practicum)
+
+<Steps>
+1. **역할 분담 설계**
+
+   프로젝트 명세를 받아 4개 에이전트의 역할과 책임을 설계한다.
+
+2. **아티팩트 스키마 정의**
+
+   에이전트 간 전달되는 모든 아티팩트의 JSON 스키마를 정의한다.
+
+3. **파이프라인 프로토타입**
+
+   Planner → Coder 2단계 파이프라인을 실제로 구현하고 테스트한다.
+</Steps>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### Lab 07: 멀티에이전트 파이프라인 설계
+
+**제출 마감**: 2026-04-22 23:59
+
+**요구사항**:
+1. 5단계 멀티에이전트 아키텍처 다이어그램
+2. 에이전트 간 아티팩트 JSON 스키마 정의
+3. Planner → Coder 2단계 파이프라인 구현
+4. 실행 로그 및 성능 분석
+
+</div>

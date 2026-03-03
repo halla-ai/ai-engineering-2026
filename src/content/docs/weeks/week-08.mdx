@@ -1,0 +1,135 @@
+---
+title: "8주차: 플래닝 에이전트 구현"
+description: 추상적 요구사항에서 결정론적 기계 가독형 명세서까지 — Planner Agent 상세 구현
+week: 8
+phase: 3
+phase_title: 멀티에이전트 SDLC
+date: "2026-04-22"
+theory_topics:
+  - 플래닝 에이전트 아키텍처
+  - 명세서(spec.md) 자동 생성
+  - 코드베이스 분석 기법
+lab_topics:
+  - 플래너 에이전트 구현
+  - spec.md 자동 생성 파이프라인
+assignment: "Lab 08: 플래닝 에이전트 구현"
+assignment_due: "2026-04-29"
+difficulty: 고급
+estimated_time: 8시간
+---
+
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 3</span>
+  <Badge text="8주차" variant="note" />
+  <Badge text="고급" variant="danger" />
+</div>
+
+## 이론 (Theory)
+
+### 플래너 에이전트의 역할
+
+플래너 에이전트는 **모호한 인간 요구사항**을 **코더 에이전트가 처리 가능한 구체적 태스크**로 변환한다.
+
+```
+입력: "사용자 인증 기능을 추가해줘"
+      ↓ (Planner Agent)
+출력: spec.md
+  - task-001: JWT 토큰 생성 모듈 (auth/jwt.py)
+  - task-002: 비밀번호 해싱 유틸리티 (auth/hash.py)
+  - task-003: 로그인 API 엔드포인트 (api/auth.py:45-80)
+  - task-004: 인증 미들웨어 (middleware/auth.py)
+  - (각 태스크에 acceptance criteria 포함)
+```
+
+### 플래너 에이전트 구현
+
+```python
+# planner_agent.py
+import anthropic
+import json
+from pathlib import Path
+
+SYSTEM_PROMPT = """당신은 소프트웨어 아키텍트 역할을 하는 플래너 에이전트입니다.
+주어진 요구사항과 코드베이스를 분석하여 구체적이고 실행 가능한 태스크 목록을 생성합니다.
+
+출력 형식: JSON
+{
+  "tasks": [
+    {
+      "id": "task-XXX",
+      "description": "구체적인 구현 내용",
+      "target_files": ["파일 경로"],
+      "dependencies": ["task-XXX"],
+      "acceptance_criteria": ["검증 조건들"]
+    }
+  ]
+}"""
+
+class PlannerAgent:
+    def __init__(self):
+        self.client = anthropic.Anthropic()
+
+    def analyze_codebase(self, project_root: Path) -> str:
+        """코드베이스 구조를 텍스트로 요약"""
+        structure = []
+        for f in project_root.rglob("*.py"):
+            structure.append(f"- {f.relative_to(project_root)}")
+        return "\n".join(structure)
+
+    def plan(self, requirement: str, project_root: Path) -> dict:
+        codebase = self.analyze_codebase(project_root)
+
+        response = self.client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=4096,
+            system=SYSTEM_PROMPT,
+            messages=[{
+                "role": "user",
+                "content": f"요구사항: {requirement}\n\n코드베이스:\n{codebase}"
+            }]
+        )
+
+        return json.loads(response.content[0].text)
+
+    def generate_spec_md(self, plan: dict, output_path: Path):
+        """JSON 계획을 Markdown 명세서로 변환"""
+        with open(output_path, 'w') as f:
+            f.write("# 프로젝트 명세서\n\n")
+            for task in plan['tasks']:
+                f.write(f"## {task['id']}: {task['description']}\n")
+                f.write(f"- 대상 파일: {', '.join(task['target_files'])}\n")
+                f.write("- 완료 조건:\n")
+                for criterion in task['acceptance_criteria']:
+                    f.write(f"  - [ ] {criterion}\n")
+                f.write("\n")
+```
+
+## 실습 (Practicum)
+
+<Steps>
+1. **플래너 에이전트 구현** — 위 코드를 기반으로 확장
+
+2. **코드베이스 분석 고도화** — 단순 파일 목록에서 함수/클래스 목록까지 분석
+
+3. **spec.md 생성 파이프라인** — 실제 프로젝트(Lab 04의 calculator)에 적용
+
+4. **생성된 spec.md 검증** — 코더 에이전트가 실제로 실행 가능한지 확인
+</Steps>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### Lab 08: 플래닝 에이전트 구현
+
+**제출 마감**: 2026-04-29 23:59
+
+**요구사항**:
+1. 완전한 `PlannerAgent` 구현 (`planner_agent.py`)
+2. 코드베이스 분석 기능 (함수/클래스 수준)
+3. 실제 프로젝트 적용 후 생성된 `spec.md`
+4. Lab 04 calculator 프로젝트를 플래너로 확장하는 end-to-end 시연
+
+</div>

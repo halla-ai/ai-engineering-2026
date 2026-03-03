@@ -1,0 +1,137 @@
+---
+title: "9주차: QA 에이전트 구현"
+description: 독립적 품질 보증 에이전트 — 피드백 루프와 회귀 방지 시스템
+week: 9
+phase: 3
+phase_title: 멀티에이전트 SDLC
+date: "2026-04-29"
+theory_topics:
+  - QA 에이전트 역할과 독립성 원칙
+  - 자동 테스트 파이프라인 설계
+  - 피드백 루프와 회귀 감지
+lab_topics:
+  - QA 에이전트 구현
+  - 코드 리뷰 자동화
+assignment: "Lab 09: QA 에이전트 구현"
+assignment_due: "2026-05-06"
+difficulty: 고급
+estimated_time: 8시간
+---
+
+import { Aside, Steps, Badge } from '@astrojs/starlight/components';
+
+<div class="week-meta">
+  <span class="phase-tag">Phase 3</span>
+  <Badge text="9주차" variant="note" />
+  <Badge text="고급" variant="danger" />
+</div>
+
+## 이론 (Theory)
+
+### QA 에이전트의 독립성 원칙
+
+QA 에이전트는 코더 에이전트와 **절대 공유 컨텍스트를 사용하지 않는다**. 동일한 컨텍스트를 가진 두 에이전트는 동일한 편향을 공유하므로, 독립적인 검증이 불가능하다.
+
+<Aside type="note" title="QA 에이전트 독립성">
+코더가 "이 코드는 맞다"고 판단했어도, QA는 코더의 추론 과정을 모르는 상태에서 **오직 코드와 테스트만 보고** 독립적으로 검증한다.
+</Aside>
+
+### QA 에이전트 구현
+
+```python
+# qa_agent.py
+import subprocess
+import anthropic
+from pathlib import Path
+
+class QAAgent:
+    def __init__(self):
+        self.client = anthropic.Anthropic()
+
+    def run_tests(self, test_dir: str) -> dict:
+        """pytest 실행 및 결과 파싱"""
+        result = subprocess.run(
+            ["python", "-m", "pytest", test_dir, "-v", "--tb=short", "--json-report"],
+            capture_output=True, text=True
+        )
+        return {
+            "passed": result.returncode == 0,
+            "output": result.stdout,
+            "errors": result.stderr
+        }
+
+    def code_review(self, diff: str) -> str:
+        """Claude를 통한 코드 리뷰"""
+        response = self.client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=2048,
+            system="""당신은 시니어 소프트웨어 엔지니어입니다.
+코드 diff를 검토하고 다음을 확인하세요:
+1. 논리적 오류
+2. 엣지 케이스 미처리
+3. 보안 취약점
+4. 성능 문제
+5. 테스트 누락
+
+출력: JSON {"approved": bool, "issues": [...], "suggestions": [...]}""",
+            messages=[{"role": "user", "content": f"코드 리뷰 요청:\n{diff}"}]
+        )
+        return response.content[0].text
+
+    def review_pr(self, pr_diff: str, test_dir: str) -> dict:
+        """PR 전체 검증"""
+        test_result = self.run_tests(test_dir)
+        review_result = self.code_review(pr_diff)
+
+        return {
+            "tests_passed": test_result["passed"],
+            "test_output": test_result["output"],
+            "code_review": review_result,
+            "approved": test_result["passed"] and "approved: true" in review_result.lower()
+        }
+```
+
+### 피드백 루프 설계
+
+```
+QA Agent가 실패 감지
+        ↓
+실패 정보 패키징:
+  - 실패한 테스트 케이스
+  - 스택 트레이스
+  - 코드 diff
+        ↓
+Coder Agent에 재할당:
+  task_queue.json에 새 태스크 추가
+  priority: HIGH
+        ↓
+Coder Agent 재실행
+```
+
+## 실습 (Practicum)
+
+<Steps>
+1. **QA 에이전트 구현** — 위 코드 기반으로 `QAAgent` 클래스 완성
+
+2. **자동 코드 리뷰 파이프라인** — git diff 추출 → Claude 리뷰 → 결과 구조화
+
+3. **피드백 루프 연동** — QA 실패 시 자동으로 Coder에게 재할당
+
+4. **전체 파이프라인 통합** — Planner → Coder → QA end-to-end 실행
+</Steps>
+
+## 과제 (Assignment)
+
+<div class="assignment-box">
+
+### Lab 09: QA 에이전트 구현
+
+**제출 마감**: 2026-05-06 23:59
+
+**요구사항**:
+1. 완전한 `QAAgent` 구현
+2. 자동 코드 리뷰 기능 (Claude API 활용)
+3. 피드백 루프 구현 (QA 실패 → Coder 재실행)
+4. Planner → Coder → QA 3단계 파이프라인 end-to-end 시연 영상 또는 로그
+
+</div>
