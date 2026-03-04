@@ -51,6 +51,8 @@ description: AI 시스템 2026 강의 관련 논문, 블로그 포스트, 공식
 ## 공식 문서
 
 - [Anthropic Claude Documentation](https://docs.anthropic.com)
+- [Gemini CLI (Google)](https://github.com/google-gemini/gemini-cli) — Google의 AI 코딩 CLI
+- [Codex CLI (OpenAI)](https://github.com/openai/codex-cli) — OpenAI의 터미널 코딩 에이전트
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io)
 - [vLLM Documentation](https://docs.vllm.ai)
 - [NVIDIA MIG User Guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/)

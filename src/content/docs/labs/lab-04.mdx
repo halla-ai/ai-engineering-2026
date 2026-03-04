@@ -7,20 +7,20 @@ estimated_time: 6시간
 assignment_due: "2026-04-01"
 ---
 
-import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
 
 <Badge text="중급" variant="tip" /> <Badge text="마감: 2026-04-01" variant="note" />
 
 ## 목표
 
 - Ralph 루프(반복적 자율 코딩 루프)의 구조 이해 및 구현
-- `harness.sh`로 Claude Code를 비대화형 모드로 제어
+- `harness.sh`로 AI 코딩 CLI를 비대화형 모드로 제어
 - PROMPT.md 작성 원칙 적용
 - Backpressure 메커니즘으로 루프 안정성 확보
 
 ## Ralph 루프 개요
 
-Ralph 루프는 "Run → Assess → Loop → Progress → Halt" 사이클로 동작하는 자율 코딩 워크플로우다. Claude Code를 헤드리스(headless)로 실행하고, 테스트 결과를 피드백으로 삼아 반복한다.
+Ralph 루프는 "Run → Assess → Loop → Progress → Halt" 사이클로 동작하는 자율 코딩 워크플로우다. AI 코딩 CLI를 헤드리스(headless)로 실행하고, 테스트 결과를 피드백으로 삼아 반복한다.
 
 ```
 PROMPT.md ──▶ Claude Code ──▶ 코드 변경
@@ -73,9 +73,10 @@ SLEEP_SEC=${SLEEP_SEC:-5}
 PROMPT_FILE="PROMPT.md"
 LOG_FILE="harness.log"
 PASS_MARKER="DONE.md"
+AI_CLI="${AI_CLI:-claude}"  # 도구 선택: claude, gemini, codex
 
 iter=0
-echo "[harness] Ralph 루프 시작 (최대 ${MAX_ITER}회)" | tee "$LOG_FILE"
+echo "[harness] Ralph 루프 시작 (최대 ${MAX_ITER}회, 도구: ${AI_CLI})" | tee "$LOG_FILE"
 
 while [ $iter -lt $MAX_ITER ]; do
   iter=$((iter + 1))
@@ -87,13 +88,20 @@ while [ $iter -lt $MAX_ITER ]; do
     sleep "$SLEEP_SEC"
   fi
 
-  # --- Claude Code 헤드리스 실행 ---
-  claude \
-    --print \
-    --no-color \
-    --dangerously-skip-permissions \
-    "$(cat "$PROMPT_FILE")" \
-    2>&1 | tee -a "$LOG_FILE"
+  # --- AI 코딩 CLI 헤드리스 실행 ---
+  case "$AI_CLI" in
+    claude)
+      claude --print --no-color --dangerously-skip-permissions \
+        "$(cat "$PROMPT_FILE")" 2>&1 | tee -a "$LOG_FILE" ;;
+    gemini)
+      cat "$PROMPT_FILE" | gemini 2>&1 | tee -a "$LOG_FILE" ;;
+    codex)
+      codex --approval-mode full-auto \
+        "$(cat "$PROMPT_FILE")" 2>&1 | tee -a "$LOG_FILE" ;;
+    *)
+      echo "[harness] 지원하지 않는 도구: $AI_CLI" | tee -a "$LOG_FILE"
+      exit 1 ;;
+  esac
 
   # --- 완료 조건 확인 ---
   if [ -f "$PASS_MARKER" ]; then
@@ -113,6 +121,12 @@ done
 echo "[harness] 최대 이터레이션 도달 — 실패" | tee -a "$LOG_FILE"
 exit 1
 ```
+
+<Aside type="note" title="도구별 권한 모델 차이">
+- **Claude Code**: `--dangerously-skip-permissions`로 파일 작업 자동 승인. MCP 경로 제한으로 보안 확보.
+- **Codex CLI**: 내장 샌드박스로 안전한 자동 실행. 별도 권한 플래그 불필요.
+- **Gemini CLI**: pipe 모드로 비대화형 실행. 별도 권한 플래그 없음.
+</Aside>
 
 ### 3. Backpressure 메커니즘
 

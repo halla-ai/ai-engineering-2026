@@ -7,7 +7,7 @@ estimated_time: 8시간
 assignment_due: "2026-05-13"
 ---
 
-import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
 
 <Badge text="고급" variant="danger" /> <Badge text="마감: 2026-05-13" variant="note" />
 
@@ -269,17 +269,37 @@ if __name__ == "__main__":
         result.print_report()
 ```
 
-### 5. Claude Code와 vLLM 연동
+### 5. AI 코딩 CLI와 vLLM 연동
 
-```bash
-# Claude Code가 DeepSeek-Coder-V2를 사용하도록 설정
-export ANTHROPIC_BASE_URL="http://localhost:8000/v1"
-export ANTHROPIC_MODEL="deepseek-coder-v2"
-
-# 또는 OpenAI 호환 모드로 직접 사용
-export OPENAI_API_BASE="http://localhost:8000/v1"
-export OPENAI_API_KEY="not-required"
-```
+<Tabs>
+  <TabItem label="Claude Code">
+    ```bash
+    export ANTHROPIC_BASE_URL="http://localhost:8000/v1"
+    export ANTHROPIC_MODEL="deepseek-coder-v2"
+    ```
+  </TabItem>
+  <TabItem label="Gemini CLI">
+    ```bash
+    # Gemini CLI는 로컬 모델 직접 연동을 지원하지 않음
+    # OpenAI 호환 API를 통해 간접 사용
+    export OPENAI_API_BASE="http://localhost:8000/v1"
+    export OPENAI_API_KEY="not-required"
+    ```
+  </TabItem>
+  <TabItem label="Codex CLI">
+    ```bash
+    export OPENAI_API_BASE="http://localhost:8000/v1"
+    export OPENAI_API_KEY="not-required"
+    ```
+  </TabItem>
+  <TabItem label="OpenCode">
+    ```bash
+    # OpenCode 설정에서 커스텀 엔드포인트 지정
+    export OPENAI_API_BASE="http://localhost:8000/v1"
+    export OPENAI_API_KEY="not-required"
+    ```
+  </TabItem>
+</Tabs>
 
 ```python
 # local_agent.py — 로컬 모델로 에이전트 실행

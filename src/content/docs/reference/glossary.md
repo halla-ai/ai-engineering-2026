@@ -69,8 +69,11 @@ description: AI 시스템 2026 강의 주요 용어 정의
 **PagedAttention**
 : vLLM의 핵심 기술. OS의 가상 메모리 페이징을 KV 캐시에 적용하여 메모리 낭비를 4% 이하로 줄임.
 
+**AI 코딩 CLI (AI Coding CLI)**
+: 터미널에서 AI 에이전트를 실행하는 명령줄 도구의 총칭. Claude Code, Gemini CLI, Codex CLI, OpenCode 등이 해당. 헤드리스 모드로 Ralph 루프에서 자동화 가능.
+
 **Ralph Loop (Ralph 루프)**
-: Geoffrey Huntley가 2025년 대중화한 에이전틱 개발 방법론. `while :; do cat PROMPT.md | claude-code; done` 형태의 단순 지속 루프.
+: Geoffrey Huntley가 2025년 대중화한 에이전틱 개발 방법론. `while :; do cat PROMPT.md | <ai-coding-cli>; done` 형태의 단순 지속 루프. `<ai-coding-cli>`에는 `claude`, `gemini`, `codex` 등을 사용할 수 있다.
 
 **Ralphthon**
 : Ralph 루프 방법론을 중심으로 한 해커톤 형식의 집중 개발 이벤트. 이 강의 캡스톤 프로젝트의 이름.

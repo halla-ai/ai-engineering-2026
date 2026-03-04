@@ -40,7 +40,7 @@ lastUpdated: 2026-03-03
 
 | 주차 | 이론 | 실습 |
 |------|------|------|
-| 1주 | 코스 오리엔테이션, AI 시스템 패러다임 전환, HITL vs HOTL 비교 | 개발 환경 설정, Claude Code 설치 (Lab 01) |
+| 1주 | 코스 오리엔테이션, AI 시스템 패러다임 전환, HITL vs HOTL 비교 | 개발 환경 설정, AI 코딩 CLI 도구 설치 (Lab 01) |
 | 2주 | HOTL 거버넌스 상세, EU AI Act 컴플라이언스, Governance-as-Code | 첫 번째 에이전틱 루프 구현 (Lab 02) |
 | 3주 | MIG 기술 원리, Kubernetes 오케스트레이션, MCP(Model Context Protocol) | MCP 서버 구성 및 도구 연결 (Lab 03) |
 
@@ -97,6 +97,8 @@ lastUpdated: 2026-03-03
 - [Model Context Protocol 공식 문서](https://modelcontextprotocol.io)
 - [vLLM 공식 문서](https://docs.vllm.ai)
 - [DeepSeek-Coder-V2 논문](https://arxiv.org/abs/2406.11931)
+- [Gemini CLI 문서](https://github.com/google-gemini/gemini-cli) — Google의 AI 코딩 CLI
+- [Codex CLI 문서](https://github.com/openai/codex-cli) — OpenAI의 터미널 코딩 에이전트
 
 ## 수강 전 요구사항
 

@@ -7,7 +7,7 @@ estimated_time: 5시간
 assignment_due: "2026-03-25"
 ---
 
-import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
 
 <Badge text="초급" variant="caution" /> <Badge text="마감: 2026-03-25" variant="note" />
 
@@ -19,17 +19,33 @@ import { Steps, Aside, Badge } from '@astrojs/starlight/components';
 
 ## MCP 개요
 
-MCP는 Claude가 외부 도구·데이터 소스와 표준화된 방식으로 통신하는 프로토콜이다. Claude Code는 `~/.claude/settings.json`(또는 프로젝트별 `.claude/settings.json`)에 MCP 서버를 등록하여 사용한다.
+MCP는 AI 코딩 에이전트가 외부 도구·데이터 소스와 표준화된 방식으로 통신하는 프로토콜이다. MCP를 지원하는 CLI 도구는 설정 파일에 MCP 서버를 등록하여 사용한다.
 
 ```
-Claude Code  ←→  MCP 클라이언트  ←→  MCP 서버  ←→  파일시스템 / Git / 커스텀 API
+AI 코딩 에이전트  ←→  MCP 클라이언트  ←→  MCP 서버  ←→  파일시스템 / Git / 커스텀 API
 ```
+
+<Aside type="caution" title="MCP 지원 현황">
+- **Claude Code**: 완전 지원 (`~/.claude/settings.json`)
+- **Gemini CLI**: 지원 (`~/.gemini/settings.json`)
+- **Codex CLI**: 미지원 — MCP 실습은 Claude Code 또는 Gemini CLI로 진행할 것
+- **OpenCode**: 제한적 지원
+</Aside>
 
 ## 구현 요구사항
 
 ### 1. MCP 서버 설정 — `settings.json`
 
-Claude Code 설정 파일에 두 개의 내장 서버를 추가한다.
+AI 코딩 CLI의 설정 파일에 두 개의 내장 서버를 추가한다.
+
+<Tabs>
+  <TabItem label="Claude Code">
+    설정 파일: `~/.claude/settings.json` (또는 프로젝트별 `.claude/settings.json`)
+  </TabItem>
+  <TabItem label="Gemini CLI">
+    설정 파일: `~/.gemini/settings.json`
+  </TabItem>
+</Tabs>
 
 ```json
 {
@@ -56,7 +72,7 @@ Claude Code 설정 파일에 두 개의 내장 서버를 추가한다.
 ```
 
 <Aside type="tip" title="경로 주의">
-`filesystem` 서버에 등록한 경로 외부의 파일은 Claude가 접근할 수 없다. 실습 디렉터리를 정확히 지정할 것.
+`filesystem` 서버에 등록한 경로 외부의 파일은 에이전트가 접근할 수 없다. 실습 디렉터리를 정확히 지정할 것.
 </Aside>
 
 ### 2. 서버 동작 확인
@@ -198,5 +214,5 @@ claude "lab-03 디렉터리에서 pytest를 실행해줘."
 - [ ] `README.md` — 각 MCP 서버의 동작 확인 결과 및 트러블슈팅 기록
 
 <Aside type="caution" title="보안 고려">
-MCP 서버는 Claude에게 강력한 권한을 부여한다. 프로덕션 환경에서는 허용 경로와 실행 가능 명령을 최소한으로 제한할 것.
+MCP 서버는 AI 코딩 에이전트에게 강력한 권한을 부여한다. 프로덕션 환경에서는 허용 경로와 실행 가능 명령을 최소한으로 제한할 것.
 </Aside>

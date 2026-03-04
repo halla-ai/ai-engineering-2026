@@ -7,7 +7,7 @@ estimated_time: 7시간
 assignment_due: "2026-04-22"
 ---
 
-import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/components';
 
 <Badge text="고급" variant="danger" /> <Badge text="마감: 2026-04-22" variant="note" />
 
@@ -236,8 +236,16 @@ Assign subtasks to: researcher, coder, qa, reviewer.
 
 ```python
 # coder_agent.py
+import os
 import subprocess
 from base_agent import BaseAgent
+
+# AI 코딩 CLI 도구별 명령어 매핑
+TOOL_COMMANDS = {
+    "claude": ["claude", "--print", "--no-color", "--dangerously-skip-permissions"],
+    "gemini": ["gemini"],       # pipe 모드 사용
+    "codex": ["codex", "--approval-mode", "full-auto"],
+}
 
 CODER_SYSTEM = """
 You are a coding agent. You receive a task plan and implement the code changes.
@@ -252,6 +260,7 @@ class CoderAgent(BaseAgent):
             name="Coder",
             schema_path="schemas/coder_output.json"
         )
+        self.ai_cli = os.environ.get("AI_CLI", "claude")
 
     def run(self, input_data: dict) -> dict:
         plan = input_data["plan"]
@@ -274,10 +283,10 @@ Implement the changes and report what you did.
 """
         response_text = self._call(CODER_SYSTEM, user_prompt)
 
-        # Claude Code를 헤드리스로 실행해 실제 코드 변경 수행
+        # AI 코딩 CLI를 헤드리스로 실행해 실제 코드 변경 수행
+        cmd = TOOL_COMMANDS.get(self.ai_cli, TOOL_COMMANDS["claude"])
         result = subprocess.run(
-            ["claude", "--print", "--no-color",
-             "--dangerously-skip-permissions", response_text],
+            cmd + [response_text],
             capture_output=True, text=True, timeout=300
         )
 
@@ -286,9 +295,13 @@ Implement the changes and report what you did.
             "changes": [],        # 실제로는 git diff 파싱
             "test_command": "pytest tests/ -q",
             "status": "complete" if result.returncode == 0 else "partial",
-            "claude_output": result.stdout[:500]
+            "agent_output": result.stdout[:500]
         }
 ```
+
+<Aside type="note" title="도구 추상화">
+`AI_CLI` 환경변수로 사용할 도구를 선택할 수 있다. `export AI_CLI=gemini`으로 설정하면 Gemini CLI로 코드 변경이 수행된다.
+</Aside>
 
 <Steps>
 1. `schemas/` 디렉터리에 두 스키마 파일 생성

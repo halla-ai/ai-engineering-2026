@@ -31,6 +31,77 @@ cat PROMPT.md | claude --headless
 
 ---
 
+### Gemini CLI (Google)
+
+무료 티어를 제공하는 Google의 AI 코딩 CLI. 1M 토큰 컨텍스트 창, MCP 지원.
+
+```bash
+# 설치
+npm install -g @google/gemini-cli
+
+# 대화형 실행
+gemini
+
+# 파이프 모드 (헤드리스)
+cat PROMPT.md | gemini
+```
+
+**주요 기능**:
+- MCP 서버 통합 (`~/.gemini/settings.json`)
+- `GEMINI.md` 프로젝트별 지침 파일
+- 무료 티어: 1,000 req/day
+- 1M 토큰 컨텍스트 창
+
+---
+
+### Codex CLI (OpenAI)
+
+OpenAI의 터미널 기반 코딩 에이전트. 내장 샌드박스로 안전한 자동 실행 가능.
+
+```bash
+# 설치
+npm install -g @openai/codex
+
+# 기본 사용
+codex "Python 계산기를 만들어줘"
+
+# 자동 승인 모드 (Ralph 루프용)
+codex --approval-mode full-auto "$(cat PROMPT.md)"
+```
+
+**주요 기능**:
+- 내장 샌드박스 (가장 안전한 자동 실행)
+- `AGENTS.md` 프로젝트별 지침 파일
+- MCP 미지원
+- ChatGPT Plus 또는 API 키 필요
+
+---
+
+### OpenCode
+
+오픈소스 TUI 기반 AI 코딩 도구. 다양한 모델 백엔드 지원, 로컬 모델 연동 가능.
+
+```bash
+# 설치 (macOS)
+brew install opencode
+
+# TUI 모드 실행
+opencode
+
+# API 서버 모드
+opencode serve
+```
+
+**주요 기능**:
+- TUI(Terminal UI) 인터페이스
+- OpenAI, Anthropic, 로컬 모델(Ollama) 등 다양한 백엔드
+- 무료 (로컬 모델 사용 시 API 비용 없음)
+- MCP 제한적 지원
+
+> 도구별 상세 비교는 [AI 코딩 도구 선택 가이드](/reference/tool-selection) 참조.
+
+---
+
 ### vLLM
 
 고처리량 LLM 추론 서버. OpenAI 호환 API 제공.
@@ -65,7 +136,8 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="token")
 | `mcp-server-postgres` | PostgreSQL | `uvx` |
 
 ```json
-// ~/.claude/settings.json
+// Claude Code: ~/.claude/settings.json
+// Gemini CLI: ~/.gemini/settings.json
 {
   "mcpServers": {
     "filesystem": {

@@ -86,7 +86,7 @@ export default defineConfig({
           items: [
             { label: '실습 개요', link: '/labs' },
             { label: 'Lab 01: 개발 환경 설정', link: '/labs/lab-01' },
-            { label: 'Lab 02: 첫 Claude Code 에이전트', link: '/labs/lab-02' },
+            { label: 'Lab 02: 첫 AI 코딩 에이전트', link: '/labs/lab-02' },
             { label: 'Lab 03: MCP 서버 구성', link: '/labs/lab-03' },
             { label: 'Lab 04: Ralph 루프 구현', link: '/labs/lab-04' },
             { label: 'Lab 05: 컨텍스트 관리 실습', link: '/labs/lab-05' },
@@ -115,6 +115,7 @@ export default defineConfig({
           items: [
             { label: '참고자료 홈', link: '/reference' },
             { label: '개발 도구', link: '/reference/tools' },
+            { label: 'AI 코딩 도구 선택', link: '/reference/tool-selection' },
             { label: '논문 & 자료', link: '/reference/papers' },
             { label: '용어집', link: '/reference/glossary' },
             { label: '인프라 가이드', link: '/reference/infrastructure' },

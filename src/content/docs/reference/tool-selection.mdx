@@ -1,0 +1,157 @@
+---
+title: AI 코딩 도구 선택
+description: AI 코딩 CLI 도구 비교 및 선택 가이드 — Claude Code, Gemini CLI, Codex CLI, OpenCode
+---
+
+import { Tabs, TabItem, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+이 강의는 **Claude Code**를 기본 권장 도구로 사용하지만, 아래 대안 도구로도 대부분의 실습을 수행할 수 있다.
+
+## 도구 비교표
+
+| 항목 | Claude Code | Gemini CLI | Codex CLI | OpenCode |
+|------|------------|-----------|-----------|----------|
+| **개발사** | Anthropic | Google | OpenAI | 커뮤니티 (오픈소스) |
+| **설치** | `npm i -g @anthropic-ai/claude-code` | `npm i -g @google/gemini-cli` | `npm i -g @openai/codex` | `brew install opencode` |
+| **실행** | `claude "prompt"` | `gemini` (대화형) | `codex "prompt"` | `opencode` (TUI) |
+| **헤드리스** | `claude --print --no-color` | pipe 지원 | `codex --approval-mode full-auto` | `opencode serve` (API) |
+| **MCP 지원** | 완전 지원 | 지원 | 미지원 | 제한적 |
+| **프로젝트 지침 파일** | `CLAUDE.md` | `GEMINI.md` | `AGENTS.md` | — |
+| **컨텍스트 창** | 200K | 1M | 192K | 모델 의존 |
+| **비용** | API 키 필요 | 무료 (1,000 req/day) | ChatGPT Plus 또는 API 키 | 무료 (로컬 모델 가능) |
+| **샌드박스** | 없음 | 없음 | 있음 (가장 안전) | 없음 |
+
+## 설치 방법
+
+<Tabs>
+  <TabItem label="Claude Code (권장)">
+    ```bash
+    npm install -g @anthropic-ai/claude-code
+    claude --version
+    ```
+  </TabItem>
+  <TabItem label="Gemini CLI">
+    ```bash
+    npm install -g @google/gemini-cli
+    gemini --version
+    ```
+  </TabItem>
+  <TabItem label="Codex CLI">
+    ```bash
+    npm install -g @openai/codex
+    codex --version
+    ```
+  </TabItem>
+  <TabItem label="OpenCode">
+    ```bash
+    # macOS
+    brew install opencode
+
+    # 또는 go install
+    go install github.com/opencode-ai/opencode@latest
+    ```
+  </TabItem>
+</Tabs>
+
+## API 키 설정
+
+<Tabs>
+  <TabItem label="Claude Code">
+    ```bash
+    # Anthropic API 키 (https://console.anthropic.com)
+    export ANTHROPIC_API_KEY="sk-ant-..."
+    ```
+  </TabItem>
+  <TabItem label="Gemini CLI">
+    ```bash
+    # Google AI Studio에서 발급 (https://aistudio.google.com)
+    # 첫 실행 시 브라우저 OAuth 인증 또는:
+    export GEMINI_API_KEY="..."
+    ```
+    <Aside type="tip">Gemini CLI는 무료 티어(1,000 req/day)를 제공하므로 API 키 비용 부담이 없다.</Aside>
+  </TabItem>
+  <TabItem label="Codex CLI">
+    ```bash
+    # OpenAI API 키 (https://platform.openai.com)
+    export OPENAI_API_KEY="sk-..."
+    ```
+  </TabItem>
+  <TabItem label="OpenCode">
+    ```bash
+    # 사용할 모델 제공자에 따라 설정
+    # OpenAI 모델 사용 시:
+    export OPENAI_API_KEY="sk-..."
+    # 로컬 모델(Ollama 등) 사용 시 별도 키 불필요
+    ```
+  </TabItem>
+</Tabs>
+
+## 헤드리스 모드 (Ralph 루프용)
+
+Ralph 루프에서 CLI를 비대화형으로 실행할 때 도구별 명령이 다르다.
+
+<Tabs>
+  <TabItem label="Claude Code">
+    ```bash
+    claude --print --no-color --dangerously-skip-permissions "$(cat PROMPT.md)"
+    ```
+  </TabItem>
+  <TabItem label="Gemini CLI">
+    ```bash
+    cat PROMPT.md | gemini
+    ```
+  </TabItem>
+  <TabItem label="Codex CLI">
+    ```bash
+    codex --approval-mode full-auto "$(cat PROMPT.md)"
+    ```
+    <Aside type="tip">Codex CLI는 내장 샌드박스가 있어 `--dangerously-skip-permissions` 없이도 안전하게 자동 실행된다.</Aside>
+  </TabItem>
+  <TabItem label="OpenCode">
+    ```bash
+    # API 모드로 서버 시작 후 curl로 호출
+    opencode serve &
+    curl -X POST http://localhost:3000/api/chat \
+      -d "{\"message\": \"$(cat PROMPT.md)\"}"
+    ```
+  </TabItem>
+</Tabs>
+
+## 프로젝트 지침 파일
+
+각 도구는 프로젝트 루트에 특정 파일을 두어 에이전트에게 프로젝트별 지시를 전달한다.
+
+| 도구 | 파일명 | 위치 |
+|------|--------|------|
+| Claude Code | `CLAUDE.md` | 프로젝트 루트 |
+| Gemini CLI | `GEMINI.md` | 프로젝트 루트 |
+| Codex CLI | `AGENTS.md` | 프로젝트 루트 |
+| OpenCode | — | 별도 파일 없음 |
+
+<Aside type="note" title="강의에서의 권장 사항">
+- 이 강의의 실습 지침과 코드 예시는 **Claude Code** 기준으로 작성되어 있다.
+- MCP 관련 실습(Lab 03)은 **Claude Code 또는 Gemini CLI**에서만 완전히 수행 가능하다.
+- Codex CLI는 MCP를 지원하지 않으므로 Lab 03은 대안 도구로 진행해야 한다.
+- 다른 도구를 사용할 경우 명령어와 플래그를 각 도구에 맞게 변환하여 사용할 것.
+</Aside>
+
+## 환경변수를 이용한 도구 추상화
+
+여러 도구를 지원하는 스크립트를 작성할 때 환경변수 패턴을 사용할 수 있다.
+
+```bash
+# 환경변수로 도구 선택
+export AI_CLI="${AI_CLI:-claude}"  # 기본값: claude
+
+# harness.sh에서 사용 예시
+case "$AI_CLI" in
+  claude)
+    claude --print --no-color --dangerously-skip-permissions "$(cat PROMPT.md)" ;;
+  gemini)
+    cat PROMPT.md | gemini ;;
+  codex)
+    codex --approval-mode full-auto "$(cat PROMPT.md)" ;;
+  *)
+    echo "지원하지 않는 도구: $AI_CLI" && exit 1 ;;
+esac
+```

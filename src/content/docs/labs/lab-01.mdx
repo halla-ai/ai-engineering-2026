@@ -1,6 +1,6 @@
 ---
 title: "Lab 01: 개발 환경 설정"
-description: Claude Code CLI 설치, DGX 서버 접속, GitHub 설정 완료
+description: AI 코딩 CLI 도구 설치, DGX 서버 접속, GitHub 설정 완료
 week: 1
 difficulty: 입문
 estimated_time: 3시간
@@ -13,7 +13,7 @@ import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/component
 
 ## 목표
 
-- Claude Code CLI 설치 및 API 키 설정 완료
+- AI 코딩 CLI 도구 설치 및 API 키 설정 완료
 - DGX H100 서버 SSH 접속 성공
 - GitHub 저장소 Fork 및 PR 워크플로우 이해
 
@@ -34,32 +34,100 @@ import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/component
 
    Node.js가 없다면 [nodejs.org](https://nodejs.org)에서 설치.
 
-2. **Claude Code 설치**
+2. **AI 코딩 CLI 도구 설치**
 
-   ```bash
-   npm install -g @anthropic-ai/claude-code
-   claude --version
-   ```
+   <Tabs>
+     <TabItem label="Claude Code (권장)">
+       ```bash
+       npm install -g @anthropic-ai/claude-code
+       claude --version
+       ```
+     </TabItem>
+     <TabItem label="Gemini CLI">
+       ```bash
+       npm install -g @google/gemini-cli
+       gemini --version
+       ```
+     </TabItem>
+     <TabItem label="Codex CLI">
+       ```bash
+       npm install -g @openai/codex
+       codex --version
+       ```
+     </TabItem>
+     <TabItem label="OpenCode">
+       ```bash
+       brew install opencode
+       ```
+     </TabItem>
+   </Tabs>
 
-3. **Anthropic API 키 설정**
+   <Aside type="note">도구별 상세 비교는 [AI 코딩 도구 선택 가이드](/reference/tool-selection) 참조.</Aside>
 
-   [console.anthropic.com](https://console.anthropic.com)에서 API 키 발급 후:
+3. **API 키 설정**
 
-   ```bash
-   # ~/.bashrc 또는 ~/.zshrc에 추가
-   export ANTHROPIC_API_KEY="sk-ant-..."
+   <Tabs>
+     <TabItem label="Claude Code">
+       [console.anthropic.com](https://console.anthropic.com)에서 API 키 발급 후:
+       ```bash
+       # ~/.bashrc 또는 ~/.zshrc에 추가
+       export ANTHROPIC_API_KEY="sk-ant-..."
+       source ~/.bashrc
+       ```
+     </TabItem>
+     <TabItem label="Gemini CLI">
+       [aistudio.google.com](https://aistudio.google.com)에서 API 키 발급 후:
+       ```bash
+       export GEMINI_API_KEY="..."
+       # 또는 첫 실행 시 브라우저 OAuth 인증
+       ```
+     </TabItem>
+     <TabItem label="Codex CLI">
+       [platform.openai.com](https://platform.openai.com)에서 API 키 발급 후:
+       ```bash
+       export OPENAI_API_KEY="sk-..."
+       ```
+     </TabItem>
+     <TabItem label="OpenCode">
+       ```bash
+       # 사용할 모델 제공자에 따라 설정
+       export OPENAI_API_KEY="sk-..."  # OpenAI 모델 사용 시
+       ```
+     </TabItem>
+   </Tabs>
 
-   # 적용
-   source ~/.bashrc
-   ```
+4. **첫 실행 테스트**
 
-4. **Claude Code 첫 실행**
-
-   ```bash
-   mkdir ~/hello-agent && cd ~/hello-agent
-   claude "Python으로 'Hello, AI Engineering 2026!' 출력하는 파일을 만들어줘."
-   python hello.py
-   ```
+   <Tabs>
+     <TabItem label="Claude Code">
+       ```bash
+       mkdir ~/hello-agent && cd ~/hello-agent
+       claude "Python으로 'Hello, AI Engineering 2026!' 출력하는 파일을 만들어줘."
+       python hello.py
+       ```
+     </TabItem>
+     <TabItem label="Gemini CLI">
+       ```bash
+       mkdir ~/hello-agent && cd ~/hello-agent
+       gemini
+       # 대화형 모드에서: "Python으로 'Hello, AI Engineering 2026!' 출력하는 파일을 만들어줘."
+       ```
+     </TabItem>
+     <TabItem label="Codex CLI">
+       ```bash
+       mkdir ~/hello-agent && cd ~/hello-agent
+       codex "Python으로 'Hello, AI Engineering 2026!' 출력하는 파일을 만들어줘."
+       python hello.py
+       ```
+     </TabItem>
+     <TabItem label="OpenCode">
+       ```bash
+       mkdir ~/hello-agent && cd ~/hello-agent
+       opencode
+       # TUI에서: "Python으로 'Hello, AI Engineering 2026!' 출력하는 파일을 만들어줘."
+       ```
+     </TabItem>
+   </Tabs>
 
 5. **DGX 서버 접속**
 
@@ -98,7 +166,7 @@ import { Steps, Aside, Tabs, TabItem, Badge } from '@astrojs/starlight/component
 `assignments/lab-01/[학번]/` 폴더에 다음 파일을 포함한 PR:
 
 - [ ] `README.md` — 설치 과정 및 트러블슈팅 기록
-- [ ] `hello.py` — Claude Code로 생성된 Python 파일
+- [ ] `hello.py` — AI 코딩 CLI로 생성된 Python 파일
 - [ ] `screenshots/` — 설치 완료 및 DGX 접속 스크린샷 (2장 이상)
 
 <Aside type="tip" title="트러블슈팅">

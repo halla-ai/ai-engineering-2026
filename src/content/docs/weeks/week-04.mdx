@@ -42,6 +42,9 @@ Ralph 루프의 본질은 놀랍도록 단순하다:
 ```bash
 # Ralph 루프의 핵심 — 단 한 줄
 while :; do cat PROMPT.md | claude-code; done
+# 다른 AI 코딩 CLI 도구도 동일한 패턴 적용 가능:
+# while :; do cat PROMPT.md | gemini; done
+# while :; do codex --approval-mode full-auto "$(cat PROMPT.md)"; done
 ```
 
 이 무한 루프의 **지능은 루프 자체가 아닌 환경 제약(harness)에 있다**.

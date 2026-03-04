@@ -9,7 +9,8 @@ description: AI 시스템 2026 강의 참고자료 모음
 
 ## 카테고리
 
-- [개발 도구](/reference/tools) — Claude Code, vLLM, MCP 등 핵심 도구 가이드
+- [개발 도구](/reference/tools) — Claude Code, Gemini CLI, Codex CLI, vLLM, MCP 등 핵심 도구 가이드
+- [AI 코딩 도구 선택](/reference/tool-selection) — AI 코딩 CLI 도구 비교 및 선택 가이드
 - [논문 & 자료](/reference/papers) — 에이전틱 AI, 하네스 엔지니어링 관련 논문
 - [용어집](/reference/glossary) — 강의에서 사용하는 주요 용어 정의
 - [인프라 가이드](/reference/infrastructure) — DGX H100, MIG, Kubernetes 운영 가이드
@@ -18,6 +19,9 @@ description: AI 시스템 2026 강의 참고자료 모음
 
 ### 공식 문서
 - [Anthropic Claude Code 문서](https://docs.anthropic.com/claude-code)
+- [Gemini CLI (Google)](https://github.com/google-gemini/gemini-cli)
+- [Codex CLI (OpenAI)](https://github.com/openai/codex-cli)
+- [OpenCode](https://github.com/opencode-ai/opencode)
 - [Model Context Protocol 공식 문서](https://modelcontextprotocol.io)
 - [vLLM 문서](https://docs.vllm.ai)
 - [NVIDIA MIG 가이드](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/)
