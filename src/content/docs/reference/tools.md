@@ -164,13 +164,20 @@ pip install opentelemetry-sdk opentelemetry-exporter-prometheus
 
 ---
 
-### DeepSeek-Coder-V2
+### 오픈소스 코딩 LLM
 
-오픈소스 코딩 특화 LLM (236B MoE, Apache 2.0).
+로컬 배포 가능한 주요 코딩 모델. vLLM 또는 SGLang으로 서빙하여 OpenAI 호환 API로 사용.
 
-- HuggingFace: `deepseek-ai/DeepSeek-Coder-V2-Instruct`
-- Lite 버전: `deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct` (16B)
-- 컨텍스트: 128K 토큰
+| 모델 | 파라미터 | 활성 | 컨텍스트 | HuggingFace |
+|------|---------|------|---------|-------------|
+| **Qwen3-Coder** | 235B (MoE) | 22B | 128K | `Qwen/Qwen3-Coder-32B-Instruct` |
+| **DeepSeek V3** | 685B (MoE) | 37B | 128K | `deepseek-ai/DeepSeek-V3` |
+| **GLM-4.7** | ~32B (Dense) | 전체 | 128K | `THUDM/glm-4-9b-chat` |
+| **MiniMax M2.1** | 230B (MoE) | 10B | 128K | `MiniMax/MiniMax-M2.1` |
+| **DeepSeek-Coder-V2** | 236B (MoE) | 21B | 128K | `deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct` |
+| **Qwen3 14B/8B** | 14B/8B | 전체 | 128K | `Qwen/Qwen3-14B`, `Qwen/Qwen3-8B` |
+
+> 모델별 상세 비교와 하드웨어 요건은 [10주차 강의](/weeks/week-10) 참조.
 
 ---
 

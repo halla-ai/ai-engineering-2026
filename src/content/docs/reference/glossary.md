@@ -24,6 +24,9 @@ description: AI 시스템 2026 강의 주요 용어 정의
 **CUD Operations**
 : Create, Update, Delete 작업. HOTL 거버넌스에서 High Risk로 분류되어 Hard Interrupt가 필요한 작업.
 
+**DeepSeek V3**
+: DeepSeek의 685B MoE 모델. 37B 활성 파라미터로 수학/추론/코딩 최상위권 성능. 8×H100 급 클러스터 필요.
+
 **DGX H100**
 : NVIDIA의 엔터프라이즈급 AI 서버. 제주한라대학교 AI 실습실에 설치된 모델. H100 GPU 8개 탑재.
 
@@ -63,8 +66,20 @@ description: AI 시스템 2026 강의 주요 용어 정의
 **MIG (Multi-Instance GPU)**
 : NVIDIA GPU를 독립적인 인스턴스로 분할하는 기술. H100에서 최대 7개 인스턴스 생성 가능. 하드웨어 수준 격리 제공.
 
+**MiniMax M2.1**
+: MiniMax의 230B MoE 모델 (10B 활성). 코딩 에이전트와 도구 사용에 특화. 가중치 완전 공개.
+
 **MoE (Mixture of Experts)**
-: LLM 아키텍처 중 하나. 전체 파라미터 중 일부만 활성화하여 추론 효율성을 높임. DeepSeek-Coder-V2에 적용.
+: LLM 아키텍처 중 하나. 전체 파라미터 중 일부만 활성화하여 추론 효율성을 높임. Qwen3-Coder, DeepSeek V3, MiniMax M2.1 등에 적용.
+
+**Qwen3-Coder**
+: Alibaba의 235B MoE 코딩 특화 모델 (22B 활성, 128K 컨텍스트). SWE-bench에서 상용 모델에 근접하는 성능. Apache 2.0 라이선스.
+
+**GLM-4.7**
+: Zhipu AI의 ~32B Dense 코딩 모델. Interleaved Thinking 기능으로 추론 품질이 높음. 단일 GPU 구동 가능. HuggingFace/ModelScope 공개.
+
+**SGLang**
+: vLLM과 함께 대표적인 오픈소스 LLM 추론 프레임워크. RadixAttention 기반 KV 캐시 재사용으로 높은 처리량 제공.
 
 **PagedAttention**
 : vLLM의 핵심 기술. OS의 가상 메모리 페이징을 KV 캐시에 적용하여 메모리 낭비를 4% 이하로 줄임.
