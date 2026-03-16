@@ -12,8 +12,14 @@ description: AI 시스템 2026 강의 주요 용어 정의
 **autoresearch (자율 연구 루프)**
 : Andrej Karpathy가 공개한 자율 ML 실험 루프. 에이전트가 train.py를 수정하고, 고정 시간 예산(5분) 후 val_bpb를 측정하여 개선되면 commit, 아니면 reset한다. Ralph Loop과 동일한 패턴이되 검증 조건이 테스트 통과가 아닌 메트릭 개선이다.
 
+**AI System (AI 시스템)**
+: EU AI Act(Article 3) 정의 — varying levels of autonomy로 동작하며 input으로부터 output을 추론하는 machine-based system. AI 모델(엔진)에 도구 사용, 메모리, 계획, 실행 환경, 안전 장치, 관측성을 감싼 전체 구조. 모델이 엔진이라면 AI 시스템은 자동차다.
+
 **Agentic System (에이전틱 시스템)**
 : 파일 수정, 코드 실행, API 호출 등 실제 행동을 자율적으로 수행하는 AI 시스템. 단순 텍스트 생성을 넘어 환경과 상호작용한다.
+
+**Bitter Lesson (비터 레슨)**
+: Rich Sutton(2019)이 제시한 원칙. 연산을 활용하는 일반적 방법이 도메인 지식을 활용하는 특수한 방법보다 궁극적으로 효과적이다. 사전학습 스케일링(GPT-3→GPT-4)은 "학습" 측면, test-time compute scaling(o1, DeepSeek R1)은 "탐색" 측면의 구현이다.
 
 **Backpressure (백프레셔)**
 : Ralph 루프에서 에이전트 출력이 기준에 맞지 않을 때 시스템이 자동으로 거부하고 재시도를 강제하는 메커니즘. 컴파일러, 타입 체커, 테스트 스위트가 대표적 백프레셔 구성 요소.
@@ -116,6 +122,9 @@ description: AI 시스템 2026 강의 주요 용어 정의
 
 **SDLC (Software Development Lifecycle)**
 : 소프트웨어 개발 생애주기. 요구사항 분석 → 설계 → 구현 → 테스트 → 배포 → 유지보수.
+
+**Software 3.0 (소프트웨어 3.0)**
+: Andrej Karpathy가 제안한 개념. 프로그래머가 코드를 직접 작성하는 대신 AI 에이전트를 지휘(conduct)하는 패러다임. Software 1.0(수동 코딩), Software 2.0(신경망 학습), Software 3.0(에이전트 오케스트레이션)으로 진화한다.
 
 **TBAC (Task-Based Access Control)**
 : 에이전트의 작업 목적 단위로 도구 접근을 제어하는 패러다임. Tasks → Tools → Transactions 3계층으로 구성된다. RBAC/ABAC의 "누가"보다 "어떤 작업"이 중요한 에이전트 환경에 적합하다. 변수 치환 엔진이 `mcp.*`, `jwt.*` 네임스페이스를 지원하여 동적 정책 평가가 가능하다.
