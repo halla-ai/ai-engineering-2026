@@ -86,8 +86,8 @@ export default defineConfig({
           items: [
             { label: '실습 개요', link: '/labs' },
             { label: 'Lab 01: 개발 환경 설정', link: '/labs/lab-01' },
-            { label: 'Lab 02: 첫 AI 코딩 에이전트', link: '/labs/lab-02' },
-            { label: 'Lab 03: MCP 서버 구성', link: '/labs/lab-03' },
+            { label: 'Lab 02: 첫 번째 AI 코딩 에이전트', link: '/labs/lab-02' },
+            { label: 'Lab 03: MCP 서버 구현', link: '/labs/lab-03' },
             { label: 'Lab 04: Ralph 루프 구현', link: '/labs/lab-04' },
             { label: 'Lab 05: 컨텍스트 관리 실습', link: '/labs/lab-05' },
             { label: 'Lab 06: 인스트럭션 튜닝', link: '/labs/lab-06' },
