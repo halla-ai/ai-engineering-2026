@@ -148,3 +148,7 @@ rules:
   }
 }
 ```
+<img width="775" height="717" alt="스크린샷 2026-03-29 144306" src="https://github.com/user-attachments/assets/f7153169-fc04-4135-9ebc-44b4276b3562" />
+<img width="852" height="463" alt="스크린샷 2026-03-29 144156" src="https://github.com/user-attachments/assets/df02c3b2-3b18-4f47-ab60-8fc13db925da" />
+
+
