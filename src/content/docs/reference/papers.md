@@ -46,6 +46,8 @@ description: AI 시스템 2026 강의 관련 논문, 블로그 포스트, 공식
 - **"Harness Engineering"** — Geoffrey Huntley (2025) → 4주
 - **"Exploring Gen AI: AI Coding Agents"** — Martin Fowler / ThoughtWorks (2026) → 4주. Guides vs Sensors 프레임워크
 - **"autoresearch"** — Andrej Karpathy (2026) → 4주. 700실험, 20최적화, 11% 개선
+- **"Context Window Research"** — Chroma (2026) → 5주. 18개 모델 Context Rot 실증 연구
+- **"SkillReducer"** (arXiv:2603.29919) → 5주. 48% 설명 압축 시 품질 2.8% 향상
 - **Claude Code: Deep Dive** — Anthropic Blog (2025) → 1–2주
 
 ## 규제 자료

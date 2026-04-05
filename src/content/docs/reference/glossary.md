@@ -30,6 +30,9 @@ description: AI 시스템 2026 강의 주요 용어 정의
 **Compaction (컴팩션)**
 : 긴 대화에서 오래된 턴을 요약하여 토큰 예산 내로 압축하는 메커니즘. Claude Code에서는 12턴 초과 시 자동 트리거되며, 최근 4개 메시지를 보존하고 나머지를 plaintext 변환 + 중복 제거로 압축한다.
 
+**Context Engineering (컨텍스트 엔지니어링)**
+: 에이전트에 입력되는 컨텍스트를 체계적으로 설계하는 분야. Simon Willison이 2026년 명명. 프롬프트 엔지니어링이 "무엇을 말할 것인가"라면, 컨텍스트 엔지니어링은 "어떤 정보를 어떤 형식으로 어떤 순서에 넣을 것인가"까지 포괄한다.
+
 **Context Rot (컨텍스트 부패)**
 : 장기 실행 에이전트에서 컨텍스트 창이 실패 시도와 오래된 코드로 채워져 추론 품질이 저하되는 현상.
 
@@ -99,8 +102,14 @@ description: AI 시스템 2026 강의 주요 용어 정의
 **OBO (On-Behalf-Of)**
 : MCP 서버가 서비스 계정 대신 위임된 사용자/에이전트 ID로 작업하는 인증 패턴. OAuth 2.1 토큰 교환을 통해 "누구를 대신하여" 작업하는지 명시하여, 에이전트 환경에서 발생하는 책임 단절(accountability breakdown) 문제를 해결한다.
 
+**Initializer Pattern (이니셜라이저 패턴)**
+: Anthropic 공식 하네스 가이드의 2-phase 상태 관리 패턴. Phase 1(Initializer)에서 JSON feature list, claude-progress.txt, init.sh를 생성하고, Phase 2(Coding Agent)에서 점진적으로 작업을 수행한다. feature list를 JSON으로 쓰는 이유: 모델의 scope creep 방지.
+
 **Permission Mode (퍼미션 모드)**
 : Claude Code의 3단계 권한 모드. ReadOnly(읽기만), WorkspaceWrite(워크스페이스 내 쓰기, 기본값), DangerFullAccess(전체 접근). 4중 보안 레이어(도구 은닉 → 도구별 오버라이드 → CLI 프리셋 → Workspace boundary)와 결합하여 에이전트 행동 범위를 결정론적으로 제어한다.
+
+**Prompt Caching (프롬프트 캐싱)**
+: 에이전트의 반복되는 정적 부분(시스템 프롬프트, 도구 스키마, CLAUDE.md)을 캐시하여 비용을 절감하는 기법. 캐시 읽기는 기본 가격의 0.1x(90% 절감). Ralph 루프의 fresh context 전략은 매 세션 캐시 재생성이 필요하여 비용이 증가하는 트레이드오프가 있다.
 
 **Query Engine (쿼리 엔진)**
 : Claude Code의 대화 루프 엔진. 사용자 메시지 수신 → 시스템 프롬프트 조립 → API 스트리밍 호출 → 도구 실행 → 결과 추가를 max_turns(기본 8)까지 반복한다. 매 턴마다 TurnResult(input, response, tools, permissions, tokens, termination reason)를 캡처한다.
