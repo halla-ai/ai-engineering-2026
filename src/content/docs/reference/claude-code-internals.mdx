@@ -161,6 +161,84 @@ Claude Code 세션은 "터미널을 열면 바로 시작"이 아니다. 7단계 
   </div>
 </div>
 
+### 시스템 프롬프트 아키텍처 — 29블록 동적 조립
+
+턴 루프의 첫 단계인 "시스템 프롬프트 조립"은 단순한 정적 문자열이 아니다. **29개 컴포넌트를 조건부로 조립하는 동적 컨텍스트 엔진**이다.
+
+#### Always vs Conditional 블록
+
+29개 중 11개는 매 세션 무조건 포함되는 **Always** 블록, 18개는 기능 플래그로 켜고 끄는 **Conditional** 블록이다.
+
+| 구분 | 블록 수 | 주요 블록 |
+|------|---------|----------|
+| **Always** | 11 | Intro, System Rules, Doing Tasks, Executing Actions with Care, Using Your Tools, Tone and Style, Output Efficiency, Shell Shortcut, Environment Info, Summarize Tool Results 등 |
+| **Conditional** | 18 | Agent Tool, Skills, Memory, MCP Instructions, Git Status, Token Budget, Verification Agent 등 |
+
+Always 블록만으로 Claude Code의 **기본 성격이 완성**된다 — Intro에서 모델 정체성을 잡고, System Rules에서 도구 규칙을 세우고, Doing Tasks에서 코딩 철학을 심는다. Conditional 블록은 기능 플래그 하나로 런타임에 프롬프트 형태가 완전히 달라진다.
+
+#### 배치 순서 = 우선순위
+
+블록의 **물리적 배치 순서**가 모델의 행동 우선순위를 결정한다. 분기점은 **Cache Boundary Marker**다.
+
+<div class="diagram">
+  <div class="diagram__title">SYSTEM PROMPT BLOCK LAYOUT</div>
+  <div class="diagram__flow">
+    <div class="diagram__node diagram__node--blue diagram__node--full">
+      <span class="diagram__node__label">Always 블록 (캐시 가능 영역)</span>
+      <span class="diagram__node__sub">정체성 → 규칙 → 도구 사용법 → 톤 순서. 매 API 호출마다 동일하게 캐시</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--orange diagram__node--full" style="border-style:dashed;">
+      <span class="diagram__node__label">SYSTEM_PROMPT_DYNAMIC_BOUNDARY</span>
+      <span class="diagram__node__sub">이 마커 위 = 글로벌 캐시 영역 / 아래 = 세션별 동적 영역</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--purple diagram__node--full">
+      <span class="diagram__node__label">Conditional 블록 (동적 영역)</span>
+      <span class="diagram__node__sub">Agent Tool, Skills, Memory, MCP Instructions — 세션별로 빠지거나 들어감</span>
+    </div>
+    <div class="diagram__arrow">&#x2193;</div>
+    <div class="diagram__node diagram__node--cyan diagram__node--full">
+      <span class="diagram__node__label">Git Status + Append System Prompt</span>
+      <span class="diagram__node__sub">의도적으로 맨 마지막 배치 — 사용자 커스텀이 기존 규칙 위에 덮어쓸 수 있는 구조</span>
+    </div>
+  </div>
+</div>
+
+#### Variation — 동일 블록, 다른 콘텐츠
+
+상당수 블록은 **varies** 태그를 가진다. 같은 블록이 맥락에 따라 다른 텍스트를 담는다:
+
+| 블록 | 조건 A | 조건 B |
+|------|--------|--------|
+| **Intro** | `output_style` 미설정 → "소프트웨어 엔지니어링을 돕는 에이전트" | 설정 시 → "Output Style에 따라 응답하는 에이전트" |
+| **Output Efficiency** | 내부 사용자 → "사람을 위해 쓰고 있다고 생각하라" | 외부 사용자 → "요점만 말하라, 가장 단순한 접근부터" |
+| **Agent Tool** | fork 모드 on → "자기 복제본을 백그라운드 실행" | off → "전문 에이전트를 생성" |
+| **Environment Info** | 일반 → 모델명·버전 표시 | undercover 모드 → 모델 정보 전체 은닉 |
+
+<Aside type="tip" title="같은 모델, 다른 에이전트">
+6개 코딩 에이전트의 시스템 프롬프트를 비교한 연구에서, 프롬프트를 서로 바꿔 끼우면 **동일 모델이라도 작업 방식이 완전히 달라졌다**. 신경 써야 할 건 모델 선택이 아니라 **매 순간 무엇을 보여주느냐**다.
+</Aside>
+
+#### 실무 설계 패턴 4가지
+
+**1. 캐시 경계 설계** — `SYSTEM_PROMPT_DYNAMIC_BOUNDARY` 마커 하나로 글로벌 캐시와 동적 영역을 분리. API 호출마다 반복되는 Always 블록을 캐시해 **비용을 절감**한다.
+
+**2. Verification Agent** — 파일 3개 이상 수정하면 독립 검증 에이전트를 먼저 띄우라는 Conditional 블록. **자기 검증을 프롬프트 레벨에서 강제**한 설계.
+
+**3. Microcompact + Summarize Tool Results** — 오래된 도구 결과를 자동 삭제하되, 중요 정보는 먼저 텍스트로 기록하라는 지시가 짝으로 동작. Anthropic의 tool result clearing 전략이 코드로 구현된 것.
+
+**4. Token Budget** — `+500k` 같은 토큰 예산을 지정하면 모델이 해당 예산을 소진할 때까지 작업을 멈추지 않는다. 장기 실행 세션의 **자율성을 토큰 단위로 제어**.
+
+#### 강의 연결
+
+| 주차 | 연결 |
+|------|------|
+| **5주차** | Cache Boundary = 토큰 효율 극대화. Microcompact = Context Rot의 프롬프트 레벨 방어 |
+| **6주차** | Always 블록 = "Sign" 메타포의 뼈대. Variation = 인스트럭션 튜닝의 실제 메커니즘 |
+| **7주차** | Verification Agent = 멀티에이전트 자기검증 패턴의 프롬프트 구현 |
+| **12주차** | Token Budget = 비용/품질 트레이드오프의 런타임 제어 |
+
 ### TurnResult — 턴 결과 캡처
 
 매 턴마다 7개 요소를 기록한다:
@@ -416,6 +494,10 @@ Claude Code가 실제로 "행동"할 수 있는 이유. 도구 없는 LLM은 텍
 </div>
 
 수동 트리거: `/compact` 명령
+
+<Aside type="tip" title="Microcompact + Summarize Tool Results">
+Auto-compaction 외에 **Microcompact** 메커니즘이 있다. 오래된 도구 결과를 자동 삭제하되, 삭제 전 중요 정보를 먼저 텍스트로 기록하라는 `Summarize Tool Results` 지시가 짝으로 동작한다. Anthropic 공식 블로그의 tool result clearing 전략이 코드로 구현된 것이다. 컨텍스트 윈도우를 **점진적으로, 안전하게** 회수하는 패턴.
+</Aside>
 
 ### 토큰 추적과 비용 계산
 
@@ -678,7 +760,7 @@ Claude Code의 동작을 결정하는 설정 계층.
 | 레이어 | 핵심 개념 | 가장 관련된 주차 |
 |--------|----------|-----------------|
 | Bootstrap & Session | 7단계 초기화, 세션 영속화 | 4주차 (루프 lifecycle) |
-| Query Engine | 턴 루프, 예산 제어, TurnResult | 4주차, 5주차 |
+| Query Engine | 턴 루프, 예산 제어, TurnResult, **29블록 시스템 프롬프트 조립** | 4주차, 5주차, 6주차 |
 | Tool System | 40도구, 3-Layer, ToolSpec | 3주차 (MCP), 7주차 |
 | Permission Model | 3모드, 4중 보안, Bash 안전 | 2주차, 6주차 |
 | Context Management | CLAUDE.md 계층, compaction, 토큰 추적 | 5주차, 6주차, 12주차 |
