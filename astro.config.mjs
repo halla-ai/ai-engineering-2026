@@ -179,6 +179,11 @@ export default defineConfig({
           ],
         },
         {
+          label: '과제 현황',
+          translations: { en: 'Assignments' },
+          link: '/assignments',
+        },
+        {
           label: '기여 가이드',
           translations: { en: 'Contributing' },
           collapsed: true,

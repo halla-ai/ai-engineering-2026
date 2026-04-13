@@ -1,0 +1,128 @@
+---
+title: "Assignment Submissions"
+description: Weekly student assignment submission status and content summary
+---
+
+import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
+
+This page summarizes student assignments submitted via GitHub PRs. See the [Contributing Guide](/en/contribute) for submission instructions.
+
+<Aside type="tip" title="Submission Path">
+Add files to `assignments/week-XX/[student-id]/` or `assignments/lab-XX/[student-id]/` directories. PR titles should follow the format `[Submit] Lab XX - StudentID Name`.
+</Aside>
+
+---
+
+## Submission Overview
+
+| Student ID | Name | Week 01 | Week 02 | Week 03 | Week 04 |
+|------------|------|:-------:|:-------:|:-------:|:-------:|
+| 202021016 | Kim Hyeongcheol | | | | <Badge text="Submitted" variant="caution" /> |
+| 202021035 | Heo Suhwan | <Badge text="Submitted" variant="success" /> | | | |
+| 202121014 | — | <Badge text="Submitted" variant="success" /> | | | <Badge text="Submitted" variant="success" /> |
+| 202321005 | Kim Jaeeun | <Badge text="Submitted" variant="success" /> | | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> |
+| 202321006 | Kim Junseo | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> |
+| 202321010 | — | <Badge text="Submitted" variant="success" /> | | <Badge text="Submitted" variant="success" /> | <Badge text="Submitted" variant="success" /> |
+
+- <Badge text="Submitted" variant="success" /> Meets assignment requirements
+- <Badge text="Submitted" variant="caution" /> Submitted but needs supplementation
+
+---
+
+## Week 01: AI Coding CLI Installation and Execution
+
+**Assignment**: Install an AI coding CLI (Claude Code, Gemini CLI, or Codex CLI), create hello_agent.py, document installation issues and solutions
+
+<CardGrid>
+  <Card title="202021035 Heo Suhwan">
+    **Tool**: Codex CLI (Windows)
+
+    Resolved PowerShell execution policy error (`Set-ExecutionPolicy`), Windows environment variable setup (`export` → `set`). Systematic troubleshooting report.
+  </Card>
+  <Card title="202121014">
+    **Tool**: Codex CLI
+
+    Verified Node.js version compatibility (v24 vs recommended v20). Selected ChatGPT account login for authentication.
+  </Card>
+  <Card title="202321005 Kim Jaeeun">
+    **Tool**: Claude Code
+
+    Resolved SSH Permission denied (`ssh-keygen` + `ssh-copy-id`). Fixed CLI PATH not registered issue.
+  </Card>
+  <Card title="202321006 Kim Junseo">
+    **Tool**: Codex CLI
+
+    Implemented a Pygame pinball game. Resolved Python 3.14 `distutils` removal issue using `uv run --python 3.12`.
+  </Card>
+  <Card title="202321010">
+    **Tool**: Gemini CLI
+
+    Batch submission of Weeks 01–04. Includes installation screenshots and hello_agent.py.
+  </Card>
+</CardGrid>
+
+---
+
+## Week 02: Governance and MIG Simulation
+
+**Assignment**: HOTL governance, MIG virtual simulation
+
+<CardGrid>
+  <Card title="202321006 Kim Junseo">
+    Designed virtual MIG data structures with FastMCP. Overcame MIG non-support on RTX 3060 through simulation. Implemented TBAC-based role access control (Professor/Student).
+  </Card>
+</CardGrid>
+
+---
+
+## Week 03: MCP Server Implementation and Security Verification
+
+**Assignment**: FastMCP server implementation (Tool + Resource + Prompt), MIG profile analysis, governance gateway
+
+<CardGrid>
+  <Card title="202321005 Kim Jaeeun">
+    MCP server (`mcp_server.py`) + Governed Gateway (`mcp_gateway.py`). Includes MIG analysis report, K8s `nodeAffinity` example, Llama-3-8B benchmark, TBAC/SANDWORM security reports, MCP Inspector capture JSONs. Most comprehensive submission.
+  </Card>
+  <Card title="202321006 Kim Junseo">
+    MIG profile partition analysis (Strategy A vs B comparison), TBAC 3-layer architecture (Mermaid diagrams), McpInject attack simulation and defense strategies, Llama-3-8B 4-bit VRAM calculation (~6GB), `mig_monitor_server.py` JSON-RPC verification.
+  </Card>
+  <Card title="202321010">
+    MCP GPU server, MIG profile analysis, architecture documentation, K8s Pod configuration.
+  </Card>
+</CardGrid>
+
+---
+
+## Week 04: Ralph Loop Implementation and Test-time Compute Scaling
+
+**Assignment**: Ralph loop harness (`harness.sh`) implementation — backpressure, garbage collection, AGENTS.md cumulative learning
+
+<CardGrid>
+  <Card title="202021016 Kim Hyeongcheol" icon="warning">
+    Insufficient content. README is a copy of the project root README, AGENTS.md contains only "CLAUDE.md". No harness.sh or loop implementation submitted. **Needs supplementation.**
+  </Card>
+  <Card title="202121014">
+    harness.sh (103 lines), backpressure.py, AGENTS.md (Learned Patterns + Anti-Patterns + Progress checklist), PROMPT.md, 805-line execution log. Records divide-by-zero handling learning process for calculator task.
+  </Card>
+  <Card title="202321005 Kim Jaeeun">
+    Most sophisticated implementation. harness.sh (335 lines), backpressure.py (149 lines), mock_agent.py, 4 task checkpoints, 7 pytest error logs, loop metrics (CSV+JSON), worktree analysis report, RLM chunk demo experiment.
+  </Card>
+  <Card title="202321006 Kim Junseo">
+    harness.sh (76 lines) — backpressure (pytest exit code), garbage collection (file deletion), stuck detection (task splitting after 2 consecutive failures), loop metrics JSON recording. All 5 loops failed due to `pytest: command not found` — environment setup issue.
+  </Card>
+  <Card title="202321010">
+    autoresearch.py (167 lines), harness.sh (437 lines) — longest harness script. Applied JSON feature list + Initializer pattern. Includes loop results JSON, metrics CSV, worktree report.
+  </Card>
+</CardGrid>
+
+---
+
+## Common Feedback
+
+<Aside type="caution" title="Submission Guidelines">
+1. **Exclude `.pyc` files** — Add `__pycache__/` and `*.pyc` to `.gitignore`
+2. **Only modify your own student ID folder** — Don't modify other students' files or course materials when working from a fork
+3. **No Korean filenames** — macOS NFD decomposition issues. Use English filenames
+4. **Don't put assignment files in `src/content/docs/`** — This is the course site source directory
+5. **Check before PR** — Review changed file list with `git diff --stat origin/main`
+</Aside>
