@@ -1,19 +1,20 @@
 ---
 title: "10주차: 오픈소스 코딩 LLM과 로컬 배포"
-description: 상용 API를 넘어 — Qwen3-Coder, DeepSeek V3, GLM-4.7 등 오픈소스 LLM 직접 배포와 경제성 분석
+description: 상용 API를 넘어 — Gemma 4, GLM-5.1, Qwen3-Coder, DeepSeek V3 등 오픈소스 LLM 직접 배포와 경제성 분석
 week: 10
 phase: 4
 phase_title: 오픈소스 모델 & MLOps
 date: "2026-05-05"
 theory_topics:
-  - 2026 오픈소스 코딩 LLM 지형 (Qwen3-Coder, DeepSeek V3, GLM-4.7, MiniMax M2.1)
+  - 2026 오픈소스 코딩 LLM 지형 (Gemma 4, GLM-5.1, Qwen3-Coder, DeepSeek V3, GLM-4.7)
   - 오픈소스 vs 상용 API 비교
   - 에이전틱 코딩 도구 생태계
 lab_topics:
   - vLLM으로 오픈소스 모델 배포
+  - Ollama로 클라우드/로컬 모델 배포
   - AI 코딩 CLI에서 로컬 모델 연동
   - 추론 서버 성능 벤치마크
-assignment: "Lab 10: vLLM 배포 실습"
+assignment: "Lab 10: 오픈소스 모델 배포 실습 (vLLM / Ollama)"
 assignment_due: "2026-05-12"
 difficulty: 고급
 estimated_time: 8시간
@@ -38,6 +39,8 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 
 | 모델 | 총 파라미터 | 활성 파라미터 | 컨텍스트 | VRAM 요건 (FP16) | 라이선스 |
 |------|-----------|-------------|---------|-----------------|---------|
+| **Gemma 4** | 31B (Dense) | 전체 | 256K | ~20GB (Q4) | Apache 2.0 |
+| **GLM-5.1** | 미공개 | 미공개 | 198K | 클라우드 전용 | MIT |
 | **Qwen3-Coder** | 235B (MoE) | 22B | 128K | ~48GB (Q4) | Apache 2.0 |
 | **DeepSeek V3** | 685B (MoE) | 37B | 128K | 350GB+ (Q4, 멀티 GPU) | DeepSeek |
 | **GLM-4.7** | ~32B | 전체 | 128K | ~24GB (Q4) | Apache 2.0 |
@@ -48,13 +51,33 @@ import { Aside, Steps, Badge, Card, CardGrid, Tabs, TabItem } from '@astrojs/sta
 
 코딩과 에이전틱 태스크에 특화 튜닝된 최신 MoE 모델. SWE-bench Verified에서 Claude Sonnet 4에 근접하는 성능을 보여주며, 32B 급 모델 중 가장 강력한 코딩 성능을 제공한다. 14B/8B 소형 버전도 단일 GPU에서 실용적 성능을 낸다.
 
+#### Gemma 4 (Google)
+
+Gemini 3 연구 기반으로 개발된 31B Dense 모델. 256K 토큰 컨텍스트 창을 지원하여 대규모 코드베이스를 단일 프롬프트로 처리할 수 있다. LiveCodeBench v6에서 80%를 기록하며 오픈소스 코딩 모델 중 최고 성능을 달성했고, AIME 2026 89.2%, Codeforces ELO 2150, MMLU Pro 85.2%로 추론 능력도 우수하다.
+
+모델 수준에서 네이티브 함수 호출(function calling)을 지원하여 에이전틱 도구 호출 파이프라인과의 통합이 간편하다. 경량 변형으로 26B MoE 모델과 E2B/E4B edge 모델(128K 컨텍스트)이 제공되며, Ollama를 통해 클라우드(NVIDIA Blackwell GPU) 또는 로컬 배포가 가능하다. Apache 2.0 라이선스로 상용 이용과 파인튜닝에 제한이 없다.
+
+<Aside type="tip" title="네이티브 함수 호출과 에이전틱 워크플로우">
+Gemma 4는 모델 수준에서 함수 호출을 직접 지원한다. [5주차](/weeks/week-05/)에서 다룬 구조화 출력을 별도 파싱 없이 모델이 생성하므로, 에이전틱 도구 호출 파이프라인의 복잡도가 크게 낮아진다.
+</Aside>
+
+#### GLM-5.1 (Z.AI)
+
+GLM-4.7의 후속 모델로, 장기 에이전틱 태스크에 특화 설계되었다. MIT 라이선스, 198K 컨텍스트를 지원한다. SWE-Bench Pro에서 58.4로 GPT-5.4(57.7)와 Opus 4.6(57.3)을 상회하며, Terminal Bench 2.0에서 69.0, 사이버보안 벤치마크에서 68.7로 각각 최상위권을 기록했다.
+
+핵심 차별점은 장기 실행(long-horizon) 능력이다. 단일 세션에서 600회 이상의 반복과 6,000+회의 도구 호출을 수행할 수 있으며, 실행 시간이 길어질수록 성능이 향상되는 특성을 보인다. 현재 Ollama 클라우드 및 Z.AI API를 통해 사용할 수 있다.
+
+<Aside type="caution" title="장기 실행 에이전트의 가능성과 한계">
+Z.AI는 GLM-5.1의 장기 실행 능력을 세 가지 시나리오로 시연했다: 벡터 DB 최적화(600회 반복으로 21.5k QPS — 단일 세션 대비 6배), GPU 커널 최적화(1,000+ 턴), Linux 데스크톱 빌드(8시간 연속 자기 검토). [4주차](/weeks/week-04/)의 Ralph 루프 개념을 극한까지 확장한 사례로, 에이전트 자율성의 현재 한계선을 보여준다.
+</Aside>
+
 #### DeepSeek V3 (DeepSeek)
 
 685B MoE로 수학/추론/코딩에서 최상위권. 다만 양자화해도 350GB+ VRAM이 필요하여 8×H100 급 클러스터 환경이 사실상 필수. 데이터센터 규모 인프라가 있다면 최강의 오픈 모델.
 
 #### GLM-4.7 (Zhipu AI)
 
-Dense 모델로 ~32B 파라미터, 단일 48GB GPU에서 구동 가능. Interleaved Thinking(교차 사고) 기능으로 추론 품질이 높고, 코딩 벤치마크에서 Claude 수준으로 평가된다. HuggingFace/ModelScope에서 가중치 공개.
+Dense 모델로 ~32B 파라미터, 단일 48GB GPU에서 구동 가능. Interleaved Thinking(교차 사고) 기능으로 추론 품질이 높고, 코딩 벤치마크에서 Claude 수준으로 평가된다. HuggingFace/ModelScope에서 가중치 공개. 후속 모델인 GLM-5.1은 장기 에이전틱 태스크에서 큰 폭의 성능 향상을 보여준다(위 GLM-5.1 섹션 참조).
 
 #### MiniMax M2.1
 
@@ -68,10 +91,12 @@ Qwen3-Coder는 235B 파라미터 중 22B만 활성화하여 추론한다. H100 1
 
 | 환경 | GPU VRAM | 추천 모델 |
 |------|---------|----------|
-| 개인 PC (RTX 4090) | 24GB | Qwen3-Coder 14B/8B, GLM-4.7 (Q4) |
-| 워크스테이션 (A6000/H100 1개) | 48–80GB | Qwen3-Coder 32B, GLM-4.7 (FP16) |
+| 개인 PC (RTX 4090) | 24GB | Gemma 4 E4B, Qwen3-Coder 14B/8B, GLM-4.7 (Q4) |
+| 워크스테이션 (A6000/H100 1개) | 48–80GB | Gemma 4 31B, Qwen3-Coder 32B, GLM-4.7 (FP16) |
 | DGX H100 (MIG 2–4슬라이스) | 160–320GB | DeepSeek-Coder-V2, MiniMax M2.1 |
 | DGX H100 (전체 8GPU) | 640GB | DeepSeek V3 (Q4) |
+
+> GLM-5.1은 현재 Ollama 클라우드 및 Z.AI API를 통해서만 사용 가능하다.
 
 ### 오픈소스 vs 상용 API 비교
 
@@ -110,6 +135,8 @@ Qwen3-Coder는 235B 파라미터 중 22B만 활성화하여 추론한다. H100 1
       <div class="diagram__col-title diagram__col-title--green">오픈소스 모델 (Open Weights)</div>
       <div class="diagram__node diagram__node--green diagram__node--full">
         <ul>
+          <li>Gemma 4 (Google, 31B Dense, 256K)</li>
+          <li>GLM-5.1 (Z.AI, MIT, 198K)</li>
           <li>Qwen3-Coder (Alibaba, 235B MoE)</li>
           <li>DeepSeek V3 (685B MoE)</li>
           <li>GLM-4.7 (Zhipu AI, ~32B Dense)</li>
@@ -126,6 +153,7 @@ Qwen3-Coder는 235B 파라미터 중 22B만 활성화하여 추론한다. H100 1
           <li>OpenCode (다중 백엔드 TUI)</li>
           <li>Roo Code / Cline (VS Code 확장)</li>
           <li>vLLM / SGLang (추론 서버)</li>
+          <li>Ollama (로컬/클라우드 배포)</li>
         </ul>
       </div>
     </div>
@@ -134,7 +162,7 @@ Qwen3-Coder는 235B 파라미터 중 22B만 활성화하여 추론한다. H100 1
 
 <Aside type="note" title="로컬 LLM으로 Claude Code 대체?">
 소규모 팀이 월 $2K+ API 비용을 절감하기 위해 로컬 모델을 사용하는 사례가 늘고 있다.
-Qwen3-Coder, GLM-4.7 등은 일상적 코딩 작업(코드 완성, 버그 수정, PR 요약)에서
+Gemma 4, Qwen3-Coder, GLM-4.7 등은 일상적 코딩 작업(코드 완성, 버그 수정, PR 요약)에서
 상용 모델과 유사한 결과를 보여준다.
 단, 복잡한 아키텍처 설계나 대규모 리팩토링에서는 여전히 Opus/Sonnet급 모델이 우위.
 </Aside>
@@ -171,6 +199,15 @@ Qwen3-Coder, GLM-4.7 등은 일상적 코딩 작업(코드 완성, 버그 수정
          --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
          --tensor-parallel-size 1 \
          --max-model-len 32768 \
+         --port 8000
+       ```
+     </TabItem>
+     <TabItem label="Gemma 4">
+       ```bash
+       python -m vllm.entrypoints.openai.api_server \
+         --model google/gemma-4-31b-it \
+         --tensor-parallel-size 1 \
+         --max-model-len 65536 \
          --port 8000
        ```
      </TabItem>
@@ -225,18 +262,98 @@ Qwen3-Coder, GLM-4.7 등은 일상적 코딩 작업(코드 완성, 버그 수정
    ```
 </Steps>
 
+### Ollama로 클라우드/로컬 배포
+
+vLLM이 고처리량 프로덕션 환경에 적합하다면, Ollama는 설치와 사용이 간편한 개발/프로토타이핑 도구다. NVIDIA와의 파트너십으로 클라우드 GPU에서도 실행할 수 있어 로컬 GPU 없이도 대형 모델을 사용할 수 있다.
+
+<Steps>
+1. **Ollama 설치**
+
+   ```bash
+   # macOS
+   brew install ollama
+
+   # Linux
+   curl -fsSL https://ollama.com/install.sh | sh
+
+   # 설치 확인
+   ollama --version
+   ```
+
+2. **클라우드 모델 실행 (GPU 불필요)**
+
+   Ollama 클라우드는 NVIDIA Blackwell GPU에서 원격 추론을 수행한다. 로컬 GPU 없이 대형 모델의 전체 성능을 사용할 수 있다.
+
+   <Tabs>
+     <TabItem label="Gemma 4">
+       ```bash
+       # Gemma 4 31B 클라우드 — 256K 컨텍스트 자동 설정
+       ollama pull gemma4:31b-cloud
+       ollama launch claude --model gemma4:31b-cloud
+       ```
+     </TabItem>
+     <TabItem label="GLM-5.1">
+       ```bash
+       # GLM-5.1 클라우드 — 198K 컨텍스트
+       ollama run glm-5.1:cloud
+       ollama launch claude --model glm-5.1:cloud
+       ```
+     </TabItem>
+   </Tabs>
+
+3. **로컬 모델 실행**
+
+   하드웨어에 맞는 모델 크기를 선택한다.
+
+   ```bash
+   # 엣지 모델 (10GB+ VRAM) — 노트북에서 실행 가능
+   ollama pull gemma4:e4b
+   ollama launch claude --model gemma4:e4b
+
+   # 26B MoE (18GB+ VRAM)
+   ollama pull gemma4:26b
+   ollama launch claude --model gemma4:26b
+
+   # 31B Dense (20GB+ VRAM) — 최대 품질
+   ollama pull gemma4:31b
+   ollama launch claude --model gemma4:31b
+   ```
+
+4. **AI 코딩 CLI에서 Ollama 연동**
+
+   Ollama는 OpenAI 호환 API를 `localhost:11434`에서 제공한다.
+
+   ```bash
+   # OpenCode에서 Ollama 백엔드 사용
+   export OPENAI_API_BASE="http://127.0.0.1:11434/v1"
+   export OPENAI_API_KEY="ollama"
+   opencode
+   ```
+
+5. **vLLM vs Ollama 비교**
+
+   | 항목 | vLLM | Ollama |
+   |------|------|--------|
+   | 설치 난이도 | CUDA/Python 환경 필요 | 단일 명령 |
+   | 배치 처리 | 고처리량 (PagedAttention) | 단일 요청 최적화 |
+   | 클라우드 배포 | 직접 서버 구성 | Ollama Cloud (NVIDIA 파트너십) |
+   | 모델 관리 | HuggingFace에서 수동 다운로드 | `ollama pull`로 자동 관리 |
+   | 적합 환경 | 프로덕션, 높은 동시 요청 | 개발, 프로토타이핑, 개인 사용 |
+</Steps>
+
 ## 과제 (Assignment)
 
 <div class="assignment-box">
 
-### Lab 10: vLLM 배포 실습
+### Lab 10: 오픈소스 모델 배포 실습
 
 **제출 마감**: 2026-05-12 23:59
 
 **요구사항**:
-1. DGX 서버에 vLLM으로 오픈소스 모델 1개 이상 구동 성공 스크린샷
-2. 오픈소스 모델(Qwen3-Coder 또는 선택 모델) vs Claude 코딩 성능 비교 (동일 태스크 5개)
+1. vLLM **또는** Ollama로 오픈소스 모델 1개 이상 구동 성공 스크린샷
+2. 오픈소스 모델(Gemma 4, Qwen3-Coder 또는 선택 모델) vs Claude 코딩 성능 비교 (동일 태스크 5개)
 3. 처리량(tokens/sec) 벤치마크 결과
 4. 비용 분석: API 비용 vs DGX 운영 비용 계산
+5. (선택) vLLM과 Ollama 배포 경험 비교 — 설치 난이도, 성능, 유연성
 
 </div>
