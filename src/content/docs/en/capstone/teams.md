@@ -1,36 +1,53 @@
 ---
-title: Team Formation
-description: Ralphthon capstone team roster and project topics
+title: Project Registration
+description: Ralphthon capstone individual project registration
 ---
 
-## Team Formation Guidelines
+## Registration Guidelines
 
-- Team size: **3–4 members**
-- Team formation deadline: **2026-05-27** (before Week 13 class begins)
-- Team registration: Add your team information to this file via PR
+- Format: **individual projects** (small class size)
+- Project proposal presentation: **2026-04-21 (Week 8)** — midterm replacement
+- Registration deadline: **2026-04-20** (the day before Week 8 class)
+- How to register: Add your project information to this file via PR
 
-## How to Register Your Team
+## How to Register
 
-Edit this file (`src/content/docs/capstone/teams.md`) to add your team information and submit a PR.
+Edit this file (`src/content/docs/capstone/teams.md`) and add your entry to the "Registered Projects" section below, then submit a PR.
+
+### Registration Format
 
 ```markdown
-## Team [Number]: [Team Name]
+### Project [Number]: [Project Title]
 
-| Role | Student ID | Name |
-|------|-----------|------|
-| Architect | 2023xxxx | Hong Gildong |
-| Engineer | 2023xxxx | Kim Cheolsu |
-| Engineer | 2023xxxx | Lee Younghee |
-| QA/DevOps | 2023xxxx | Park Minsu |
-
-**Project Topic**: (fill in after instructor approval)
-**GitHub Repository**: https://github.com/...
+| Field | Value |
+|-------|-------|
+| Student ID | 2023xxxx |
+| Name | Hong Gildong |
+| One-line summary | (e.g., Agent that takes pytest failure logs and produces fix commits) |
+| GitHub repository | https://github.com/... |
+| Proposal | capstone/projects/2023xxxx/proposal.md |
 ```
 
-## Registered Teams
+## Deliverable Paths
 
-*Teams will be added to this section after registration.*
+```
+capstone/projects/[student-id]/
+├── proposal.md       # Project proposal (Week 8, required)
+├── design.md         # Architecture design (Week 13)
+├── progress-week14.md # Interim progress report (Week 14)
+├── README.md          # Final project documentation (Week 15)
+├── report.md          # Final report (Week 15)
+├── presentation.pdf   # Presentation slides (Week 15)
+├── demo.mp4           # Demo video (Week 15)
+└── src/               # Source code
+```
+
+## Registered Projects
+
+*Projects will be added here after registration.*
 
 ---
 
-> **Instructor Approval**: Team composition and project topics are finalized after instructor review during Week 13 class.
+> **Instructor Approval**: Project topics are finalized after feedback during the **Week 8 proposal presentation**.
+>
+> **Writing Guide**: See the [Project Proposal Writing Guide](/en/capstone/proposal-guide). The standard template ensures consistency and specificity.

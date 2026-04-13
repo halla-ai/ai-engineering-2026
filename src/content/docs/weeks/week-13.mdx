@@ -1,6 +1,6 @@
 ---
-title: "13주차: 캡스톤 프로젝트 설계"
-description: Ralphthon 준비 — 팀 구성, 주제 선정, 시스템 아키텍처 설계
+title: "13주차: 캡스톤 프로젝트 착수"
+description: Ralphthon 준비 — 개인 프로젝트 착수, 시스템 아키텍처 설계
 week: 13
 phase: 5
 phase_title: 캡스톤 Ralphthon
@@ -8,9 +8,9 @@ date: "2026-05-26"
 theory_topics:
   - Ralphthon 개요와 평가 기준
   - 시스템 아키텍처 설계 방법론
-  - 팀 협업 프로토콜
+  - 8주차 계획서 → 설계문서 확장 전략
 lab_topics:
-  - 팀 구성 및 역할 분담
+  - 프로젝트 스캐폴딩 및 환경 구성
   - 아키텍처 설계 문서 작성
 assignment: "캡스톤: 아키텍처 설계 문서"
 assignment_due: "2026-06-02"
@@ -29,18 +29,22 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 
 ## Ralphthon이란?
 
-**Ralphthon**은 이 강의의 캡스톤 프로젝트다. Ralph 루프 방법론을 기반으로 **실제 소프트웨어 문제를 해결하는 자율 에이전틱 시스템**을 팀으로 설계하고 구현한다.
+**Ralphthon**은 이 강의의 캡스톤 프로젝트다. Ralph 루프 방법론을 기반으로 **실제 소프트웨어 문제를 해결하는 자율 에이전틱 시스템**을 **개인으로 설계하고 구현**한다.
 
 업계의 해커톤(Hackathon)에서 차용한 이름으로, 2026년 초 Ralph 루프 방법론이 확산되면서 생겨난 **Ralphthon** 문화를 직접 체험하는 기회다.
 
-## 팀 구성
+<Aside type="note" title="8주차 계획서 → 13주차 설계문서">
+주제와 아키텍처의 큰 그림은 이미 [8주차 프로젝트 계획서](/weeks/week-08)에서 확정되었다. 13주차는 이를 **구현 가능한 상세 설계**로 확장하는 단계다 — 에이전트별 인터페이스, 상태 파일 스키마, MCP 도구 목록, 테스트 계획 등.
+</Aside>
+
+## 프로젝트 착수
 
 <CardGrid>
-  <Card title="팀 규모" icon="group">
-    3–4인 팀 구성. 역할: 아키텍트 1명, 엔지니어 2명, QA/DevOps 1명
+  <Card title="운영 방식" icon="rocket">
+    **개인 프로젝트**. 8주차에 승인된 계획서를 13주차부터 실제 구현.
   </Card>
-  <Card title="주제 선정" icon="document">
-    실제 문제를 해결하는 소프트웨어 프로젝트. 교수 승인 필요.
+  <Card title="주제" icon="document">
+    8주차 계획서에서 확정된 주제를 유지하되, 피드백 반영 후 범위 조정 가능.
   </Card>
 </CardGrid>
 
@@ -80,7 +84,7 @@ import { Aside, Steps, Badge, Card, CardGrid } from '@astrojs/starlight/componen
 
 **제출 마감**: 2026-06-02 23:59
 
-**제출 경로**: `capstone/teams/[팀명]/design.md`
+**제출 경로**: `capstone/projects/[학번]/design.md`
 
 **요구사항**:
 1. 문제 정의 및 해결 접근법
