@@ -32,15 +32,32 @@ description: Ralphthon 캡스톤 개인 프로젝트 등록
 
 ```
 capstone/projects/[학번]/
-├── proposal.md       # 프로젝트 계획서 (8주차 필수)
-├── design.md         # 아키텍처 설계 (13주차)
+├── proposal.md        # 프로젝트 계획서 (8주차 필수)
+├── design.md          # 아키텍처 설계 (13주차)
 ├── progress-week14.md # 중간 진행 보고 (14주차)
 ├── README.md          # 최종 프로젝트 문서 (15주차)
 ├── report.md          # 최종 보고서 (15주차)
-├── presentation.pdf   # 발표 자료 (15주차)
-├── demo.mp4           # 데모 영상 (15주차)
-└── src/               # 소스 코드
+├── links.md           # 발표 자료 + 데모 영상 외부 링크 (15주차)
+└── src/                # 소스 코드
 ```
+
+**`links.md` 템플릿** (발표 자료·데모 영상은 외부 URL로):
+
+```markdown
+# 프로젝트 외부 링크
+
+## 발표 자료 (presentation)
+- URL: https://...           <!-- Google Slides / PDF 공유 링크 / Figma 등 -->
+- 형식: Google Slides
+- 접근 권한: 누구나 보기
+
+## 데모 영상 (demo)
+- URL: https://...           <!-- YouTube unlisted / Google Drive 등 -->
+- 길이: N분 N초
+- 접근 권한: 누구나 보기
+```
+
+> `.gitignore`에서 `*.pdf`와 `*.mp4`가 차단되므로 이 파일들을 저장소에 직접 커밋할 수 없다. 외부 호스팅 후 링크만 기록한다.
 
 ## 등록된 프로젝트
 

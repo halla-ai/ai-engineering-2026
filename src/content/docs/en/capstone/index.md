@@ -36,15 +36,16 @@ The capstone is worth 30 points (30% of the final grade). Separately, the **Week
 capstone/
 └── projects/
     └── [student-id]/
-        ├── proposal.md       # Project proposal (Week 8)
-        ├── design.md         # Architecture design document (Week 13)
+        ├── proposal.md        # Project proposal (Week 8)
+        ├── design.md          # Architecture design document (Week 13)
         ├── progress-week14.md # Interim progress report (Week 14)
         ├── README.md          # Final project documentation (Week 15)
         ├── report.md          # Final report (Week 15)
-        ├── presentation.pdf   # Presentation slides (Week 15)
-        ├── demo.mp4           # Demo video (Week 15)
-        └── src/               # Source code
+        ├── links.md           # External links for slides + demo video (Week 15)
+        └── src/                # Source code
 ```
+
+> **Slides and demo video are submitted as external links**: To keep the repository lean, `.pdf` and `.mp4` files are not committed directly — instead, record external URLs (Google Drive / YouTube / Figma, etc.) in `links.md`. `.gitignore` blocks `*.pdf` and `*.mp4`.
 
 ## Related Pages
 

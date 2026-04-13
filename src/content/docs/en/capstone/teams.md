@@ -32,15 +32,32 @@ Edit this file (`src/content/docs/capstone/teams.md`) and add your entry to the 
 
 ```
 capstone/projects/[student-id]/
-├── proposal.md       # Project proposal (Week 8, required)
-├── design.md         # Architecture design (Week 13)
+├── proposal.md        # Project proposal (Week 8, required)
+├── design.md          # Architecture design (Week 13)
 ├── progress-week14.md # Interim progress report (Week 14)
 ├── README.md          # Final project documentation (Week 15)
 ├── report.md          # Final report (Week 15)
-├── presentation.pdf   # Presentation slides (Week 15)
-├── demo.mp4           # Demo video (Week 15)
-└── src/               # Source code
+├── links.md           # External links for slides + demo video (Week 15)
+└── src/                # Source code
 ```
+
+**`links.md` template** (slides and demo video as external URLs):
+
+```markdown
+# Project External Links
+
+## Presentation slides
+- URL: https://...           <!-- Google Slides / shared PDF / Figma, etc. -->
+- Format: Google Slides
+- Access: Anyone with the link
+
+## Demo video
+- URL: https://...           <!-- YouTube unlisted / Google Drive, etc. -->
+- Length: N minutes N seconds
+- Access: Anyone with the link
+```
+
+> `.gitignore` blocks `*.pdf` and `*.mp4`, so these files cannot be committed directly. Host them externally and record the URLs here.
 
 ## Registered Projects
 

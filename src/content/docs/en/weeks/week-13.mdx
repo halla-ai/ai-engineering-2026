@@ -50,11 +50,25 @@ The big picture of your topic and architecture was already locked in during the 
 
 ## Recommended Project Ideas
 
-1. **Autonomous Code Review System** — Automatically reviews GitHub PRs and suggests improvements
-2. **Automatic Test Generator** — Generates pytest tests automatically from an existing codebase
-3. **Documentation Automation** — Automatically updates README and API docs when code changes
-4. **Automatic Bug Fixer** — Reads GitHub Issues and automatically finds and fixes bugs
-5. **Performance Optimization Agent** — Analyzes profiling results and automatically fixes performance bottlenecks
+Beyond the cliché "automatic code review," here are 6 ideas that attack **novel problems** with agentic systems. Selected so you can connect this course's core techniques (loops, multi-agent, MCP, knowledge graphs) to real-world problems.
+
+1. **Paper Reproducer Agent** — Given an arXiv PDF, build a dependency environment, run the experiments, and reproduce the headline results (tables/figures). On failure, produce a diagnostic report pinpointing where the divergence occurred (environment, data, hyperparameters, or algorithm). Directly attacks the **research reproducibility** problem.
+
+2. **Personal Knowledge Graph Distiller** — Merge scattered notes from Obsidian, web bookmarks, and note apps into a Graphify-based knowledge graph, identify isolated "lone nodes," and have an LLM propose new connections. Periodically auto-generates a **"forgotten ideas recap"** note. Applies the [Week 5 LLM Wiki pattern](/en/weeks/week-05#persistent-knowledge-systems--the-llm-wiki-pattern).
+
+3. **Docs-Code Drift Detector** — Cross-verify claims in README, docstrings, and API docs against the actual code behavior at the AST level. When inconsistencies are found — e.g., "the doc says `parse_json(str) → dict` but the code returns a list" — auto-generate a fix PR. A **doc-code consistency** agent.
+
+4. **Issue Roundtable** — Given a GitHub Issue, have 4 agents (Planner/Architect/Coder/QA) debate the solution in an **open-discussion format**. When they disagree, log why; once a consensus design emerges, implement, test, and open a PR. The key is that the **decision process is preserved as an auditable conversation log**.
+
+5. **Socratic Homework Tutor** — Evaluate student-submitted code against a rubric but **refuse to hand over the answer** — instead, use Socratic questioning to guide thinking. Dynamically adjust hint strength based on the student's responses, then summarize the path the student took to reach the answer. A deeper application of Week 6's Learning output style.
+
+6. **Dependency Upgrade Context Agent (Dependabot++)** — For npm/pip dependency upgrade proposals, synthesize changelog, breaking changes, actual usage patterns, and test coverage into a **"risk score + stepwise migration plan + expected edit locations."** Goes beyond Dependabot's naive version bumps with **context-aware upgrades**.
+
+<Aside type="tip" title="Topic-selection principles">
+- **Concrete I/O**: "Good results" ❌ → "arXiv 2408.02442 → 85%+ reproduction rate report" ✓
+- **Agentic necessity**: If a single LLM call can solve it, it is not a capstone project
+- **Instructor approval**: To propose a new topic, first get feedback at the Week 8 proposal presentation
+</Aside>
 
 ## Architecture Design Checklist
 

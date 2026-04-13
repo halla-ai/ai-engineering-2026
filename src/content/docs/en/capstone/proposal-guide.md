@@ -132,8 +132,8 @@ Name the techniques from each week you will **actually apply**. Not "I've heard 
 |------|-----------|-------------|
 | Week 13 | Planner + Coder skeleton | design.md, initial code |
 | Week 14 | Ralph Loop integration, QA agent | Working pipeline demo |
-| Week 15 | System integration, E2E testing | report.md, presentation.pdf |
-| Week 16 | Final presentation, demo | demo.mp4, final submission |
+| Week 15 | System integration, E2E testing | report.md, links.md (slides URL) |
+| Week 16 | Final presentation, demo | links.md (demo video URL), final submission |
 
 ---
 

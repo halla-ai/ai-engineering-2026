@@ -132,8 +132,8 @@ User Input → Planner → Coder (Ralph Loop) → QA Gate → Human Approval →
 |------|---------|--------|
 | Week 13 | Planner + Coder 스켈레톤 | design.md, 초기 코드 |
 | Week 14 | Ralph Loop 통합, QA 에이전트 | 파이프라인 동작 데모 |
-| Week 15 | 시스템 통합, E2E 테스트 | report.md, presentation.pdf |
-| Week 16 | 최종 발표, 데모 | demo.mp4, 최종 제출 |
+| Week 15 | 시스템 통합, E2E 테스트 | report.md, links.md (슬라이드 URL) |
+| Week 16 | 최종 발표, 데모 | links.md (데모 영상 URL), 최종 제출 |
 
 ---
 
