@@ -15,14 +15,14 @@ import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
 
 ## 제출 현황 요약
 
-| 학번 | 이름 | Week 01 | Week 02 | Week 03 | Week 04 |
-|------|------|:-------:|:-------:|:-------:|:-------:|
-| 202021016 | 김형철 | | | | <Badge text="제출" variant="caution" /> |
-| 202021035 | 허수환 | <Badge text="제출" variant="success" /> | | | |
-| 202121014 | — | <Badge text="제출" variant="success" /> | | | <Badge text="제출" variant="success" /> |
-| 202321005 | 김재은 | <Badge text="제출" variant="success" /> | | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> |
-| 202321006 | 김준서 | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> |
-| 202321010 | — | <Badge text="제출" variant="success" /> | | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> |
+| 학번 | Week 01 | Week 02 | Week 03 | Week 04 |
+|------|:-------:|:-------:|:-------:|:-------:|
+| 202021016 | | | | <Badge text="제출" variant="caution" /> |
+| 202021035 | <Badge text="제출" variant="success" /> | | | |
+| 202121014 | <Badge text="제출" variant="success" /> | | | <Badge text="제출" variant="success" /> |
+| 202321005 | <Badge text="제출" variant="success" /> | | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> |
+| 202321006 | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> |
+| 202321010 | <Badge text="제출" variant="success" /> | | <Badge text="제출" variant="success" /> | <Badge text="제출" variant="success" /> |
 
 - <Badge text="제출" variant="success" /> 과제 요구사항 충족
 - <Badge text="제출" variant="caution" /> 제출했으나 내용 보완 필요
@@ -34,7 +34,7 @@ import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
 **과제**: AI 코딩 CLI(Claude Code, Gemini CLI, Codex CLI 중 선택) 설치, hello_agent.py 생성, 설치 문제 해결 기록
 
 <CardGrid>
-  <Card title="202021035 허수환">
+  <Card title="202021035">
     **도구**: Codex CLI (Windows)
 
     PowerShell 실행 정책 오류(`Set-ExecutionPolicy`로 해결), Windows 환경변수 설정(`export` → `set` 변환). 체계적인 트러블슈팅 보고서.
@@ -44,12 +44,12 @@ import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
 
     Node.js 버전 차이(v24 vs 권장 v20) 확인 후 호환성 검증. ChatGPT 계정 로그인 방식으로 인증 선택.
   </Card>
-  <Card title="202321005 김재은">
+  <Card title="202321005">
     **도구**: Claude Code
 
     SSH 접속 시 Permission denied 해결(`ssh-keygen` + `ssh-copy-id`). CLI 설치 후 PATH 미등록 문제 해결.
   </Card>
-  <Card title="202321006 김준서">
+  <Card title="202321006">
     **도구**: Codex CLI
 
     Pygame 핀볼 게임 구현. Python 3.14 `distutils` 제거 이슈를 `uv run --python 3.12`로 해결.
@@ -68,7 +68,7 @@ import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
 **과제**: HOTL 거버넌스, MIG 가상 시뮬레이션
 
 <CardGrid>
-  <Card title="202321006 김준서">
+  <Card title="202321006">
     FastMCP로 가상 MIG 데이터 구조 설계. RTX 3060 환경에서 MIG 미지원을 시뮬레이션으로 극복. TBAC 기반 역할별 도구 접근 제어(Professor/Student) 구현.
   </Card>
 </CardGrid>
@@ -80,10 +80,10 @@ import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
 **과제**: FastMCP 서버 구현(Tool + Resource + Prompt), MIG 프로파일 분석, 거버넌스 게이트웨이
 
 <CardGrid>
-  <Card title="202321005 김재은">
+  <Card title="202321005">
     MCP 서버(`mcp_server.py`) + Governed Gateway(`mcp_gateway.py`) 구현. MIG 분석 보고서, K8s `nodeAffinity` 예시, Llama-3-8B 벤치마크, TBAC/SANDWORM 보안 보고서, MCP Inspector 캡처 JSON 포함. 가장 충실한 제출.
   </Card>
-  <Card title="202321006 김준서">
+  <Card title="202321006">
     MIG 프로파일 분할 분석(전략 A vs B 비교), TBAC 3계층 아키텍처(Mermaid 다이어그램), McpInject 공격 시뮬레이션 및 방어 전략, Llama-3-8B 4-bit VRAM 계산(~6GB), `mig_monitor_server.py` JSON-RPC 검증.
   </Card>
   <Card title="202321010">
@@ -98,16 +98,16 @@ import { Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
 **과제**: Ralph 루프 하네스(`harness.sh`) 구현 — backpressure, garbage collection, AGENTS.md 누적 학습
 
 <CardGrid>
-  <Card title="202021016 김형철" icon="warning">
+  <Card title="202021016" icon="warning">
     과제 내용 부족. README가 프로젝트 root README 복사본이며, AGENTS.md는 "CLAUDE.md" 한 줄만 포함. harness.sh 및 루프 구현 미제출. **보완 필요.**
   </Card>
   <Card title="202121014">
     harness.sh(103줄) 구현, backpressure.py, AGENTS.md(Learned Patterns + Anti-Patterns + Progress 체크리스트), PROMPT.md, 805줄 실행 로그. calculator 태스크에 대한 divide-by-zero 처리 학습 과정 기록.
   </Card>
-  <Card title="202321005 김재은">
+  <Card title="202321005">
     가장 정교한 구현. harness.sh(335줄), backpressure.py(149줄), mock_agent.py, 4개 태스크 체크포인트, pytest 에러 로그 7건, 루프 메트릭(CSV+JSON), worktree 분석 보고서, RLM chunk 데모 실험 포함.
   </Card>
-  <Card title="202321006 김준서">
+  <Card title="202321006">
     harness.sh(76줄) — backpressure(pytest 종료 코드), garbage collection(파일 삭제), stuck 탐지(연속 2회 실패 시 태스크 분할), 루프 메트릭 JSON 기록. 실행 로그에서 `pytest: command not found`로 5회 모두 실패 — 환경 설정 이슈.
   </Card>
   <Card title="202321010">
