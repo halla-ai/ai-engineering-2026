@@ -26,3 +26,5 @@ pnpm-debug.log*
 .idea/
 *.swp
 *.swo
+__pycache__/
+*.pyc
